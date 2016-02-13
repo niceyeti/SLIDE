@@ -1,0 +1,11 @@
+This directory contains sample coordinate input streams for multiple words. Each file represents
+the raw input stream for a given word, and the current ones were generated directly from the 
+EyeTribe hardware. I believe it was running at 30Hz, with smoothing, but I may be wrong.
+
+
+Note that in code you can also test performance by adding random error to the cooredinates in these
+files, as far as testing error tolerance
+
+The actual input sequence here is for the sentence "The quick brown fox jumped over the lazy
+dog in Biloxi Mississippi".
+

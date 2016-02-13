@@ -1,0 +1,1 @@
+all: ; g++ -o twitch Controller.cpp SingularityBuilder.cpp LatticeBuilder.cpp Viterbi.cpp main.cpp -lrt -std=c++0x

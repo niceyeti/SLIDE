@@ -1,0 +1,75 @@
+#include "header.hpp"
+
+/*
+  Signal builder receives streaming mouse data as input. Either the entire input,
+  or through a multithreaded queue.
+
+  Thus its input is a raw signal, its output (also queued, instead of all at once)
+  is a set of clusters.
+
+  The most basic state model is: signalBuilder receive input until an event triggers,
+  it processes the event, determines a cluster, and then queues up the cluster.
+
+  Clients of SignalBuilder may then expect a streaming set of point clusters (means)
+  indicating the region where an input was most likely received.
+
+  Cluster/event-identification method:
+
+  Takes in raw signal, and outputs estimates of likely input points
+
+  Client of SensorOutput, some Mouse class, which just continually queues up mouse coordinates.
+  Clients of SingularityBuilder wants a set of likely input points so it can map those points to a word.
+  This class is non-stochastic: the output points have no associated probabilities yet, they are the best
+  estimation of the actual points. Its clients will apply the conditioning probabilities.
+
+  Important test cases: "TOP" "POL" and similar ones. The critical ones are for selecting adjacent keys; this
+  needs to be supported for any n-keys.
+
+
+  Data structures: list probably seems preferable over vector for ops like sorting, or queueing. However,
+  this isn't the case for trivial data types of 8 bytes or less, and vector is nearly always at an
+  advantage due to contiguous memory allocation. The data structures here are very small (typically
+  a matrix of 5 x 20 chars representing a word), not millions of items, so it likely doesn't make much
+  difference which is used. But in that context, vector is the more optimized option. Ops like push_front
+  can be made efficient by implementing a vector-based ring which behaves as the abstraction of a queue.
+  
+  TODO:
+  -write in the stuff about signal strength. This class should determine a cluster mean, with which
+  it should also return the estimated amount of time we were in that state, as an output parameter for clients
+  to determine the likelihood that a reflexive arc (some repeated letter) occurred there.
+
+  -timers risk overflow. remember if someone stares at a point while timers run, there is the risk of overflowing time-based vars.
+
+
+
+*/
+class SingularityBuilder
+{
+  public:
+    //streaming clustering. still reliant on a tick input, but should be near realtime
+    int dxThreshold;        //higher threshold means more precision, higher density clusters, but with fewer members, lower likelihood of "elbow" effect
+    int innerDxThreshold;   // a softer theshold once we're in the event state
+    int triggerThreshold;      //receive this many trigger before throwing. may also need to correlate these as consecutive triggers
+    int trigger;
+
+    SingularityBuilder();
+    ~SingularityBuilder();
+
+    void PrintOutData(vector<PointMu>& outData)
+    void BuildTestData(const string& fname, vector<Point>& inData);
+    void Process(vector<Point>& inData, vector<PointMu>& outData);
+    void PrintOutData(vector<PointMu>& outData);
+    Point CalculateMean(int begin, int end, const vector<Point>& coorList);
+};
+
+
+
+
+
+
+
+
+
+
+
+

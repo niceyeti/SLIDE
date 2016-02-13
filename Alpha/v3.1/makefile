@@ -1,0 +1,1 @@
+all: ; g++ -o twitch Point.cpp PointMu.cpp LanguageModel.cpp DirectInference.cpp LatticeBuilder.cpp SingularityBuilder.cpp SearchEngine.cpp Global.cpp Controller.cpp LayoutManager.cpp main.cpp -lrt -std=c++0x -O3

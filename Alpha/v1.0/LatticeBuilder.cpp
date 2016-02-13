@@ -1,0 +1,701 @@
+#include "LatticeBuilder.hpp"
+
+LatticeBuilder::LatticeBuilder()
+{
+  BuildKeyMap();
+
+  /*
+  Initial state requirements: allocate lattice to sufficient size to be able to handle max possible cluster size and
+  max likely clusters.  Of these, initialize all members to 0, but the first item in each cluster, init it to 65535 or
+  other signal value.
+
+  As we append new clusters to the lattice, the next column will by default have all zero entries except for the first
+  item identified as 65535 (or other signal) and all transition probabilities set to 1.0. Or some similar scheme...
+  */
+
+  //TODO: resolve the memory reservation strategy once data model settles
+/*
+  //build the lattice columns
+  lattice.reserve(MAX_COLS);
+  lattice.resize(MAX_COLS);
+  for(int i = 0; i < lattice.size(); i++){
+    lattice.alphas.resize(MAX_CLUSTER_ALPHAS);  //resize each column to accomodate the max number of letters in a cluster
+    for(int j = 0 ; j < MAX_CLUSTER_ALPHAS; j++){
+      lattice.alphas[j].arcs.reserve(MAX_CLUSTER_ALPHAS);
+    }
+  }
+
+  //init the lattice to all zero entries
+  for(int i = 0; i < lattice.size(); i++){
+    lattice.pReflexive = 0.0;  
+    for(int j = 0; j < lattice.alphas.size(); j++){  //init all the alphas to zero
+      lattice.alphas[j].pState = 0.0;
+      lattice.alphas[j].symbol = (char)0;
+    }
+  }
+ */
+
+
+}
+
+LatticeBuilder::~LatticeBuilder()
+{
+  //this is done by the language specification. stl data structure destructors are called recursively
+}
+
+
+//not a primary utility. this is just a lazy testing function, without any other context. inits arc size for every state of some lattice
+void LatticeBuilder::InitArcSizes(Lattice& lattice)
+{
+  int i, j;
+
+  for(i = 0; i < lattice.size() - 1; i++){
+  //cout << "init state[" << i << "].alphas arcs to size " << lattice[i + 1].alphas.size() << endl;
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      lattice[i].alphas[j].arcs.resize( lattice[i + 1].alphas.size() );
+    }
+  }
+}
+
+
+
+//builds some test lattice with good test characteristics
+void LatticeBuilder::TestBuildLattice(Lattice& lattice)
+{
+  //build a lattice of seven columns, equivalent to a seven-letter word: 'seventh'
+  Cluster c1, c2, c3, c4, c5, c6, c7;
+
+  //build c1
+  vector<char> neighbors = {'a','w','e','d','x','z','s'};
+  c1.alphas.resize(neighbors.size());
+  for(int i = 0; i < c1.alphas.size(); i++){
+    c1.alphas[i].symbol = neighbors[i];
+    c1.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c1.alphas[0].pState = (-1.0) * log2(0.1);
+  c1.alphas[1].pState = (-1.0) * log2(0.05);
+  c1.alphas[2].pState = (-1.0) * log2(0.05);
+  c1.alphas[3].pState = (-1.0) * log2(0.2);
+  c1.alphas[4].pState = (-1.0) * log2(0.1);
+  c1.alphas[5].pState = (-1.0) * log2(0.2);  
+  c1.alphas[6].pState = (-1.0) * log2(0.3);
+  for(int i = 0; i < c1.alphas.size(); i++){
+    c1.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c1.alphas[i].maxPrev = NULL;
+  }
+  c1.pReflexive = (-1.0) * log2(0.2);
+
+  //build c2
+  neighbors = {'w','s','d','r','e'};
+  c2.alphas.resize(neighbors.size());
+  for(int i = 0; i < c2.alphas.size(); i++){
+    c2.alphas[i].symbol = neighbors[i];
+    c2.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c2.alphas[0].pState = (-1.0) * log2(0.1);
+  c2.alphas[1].pState = (-1.0) * log2(0.2);
+  c2.alphas[2].pState = (-1.0) * log2(0.2);
+  c2.alphas[3].pState = (-1.0) * log2(0.2);  //bad noise
+  c2.alphas[4].pState = (-1.0) * log2(0.3);
+  for(int i = 0; i < c2.alphas.size(); i++){
+    c2.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c2.alphas[i].maxPrev = NULL;
+  }
+  c2.pReflexive = (-1.0) * log2(0.2);
+
+  //build c3
+  neighbors = {'c','f','g','b','v'};
+  c3.alphas.resize(neighbors.size());
+  for(int i = 0; i < c3.alphas.size(); i++){
+    c3.alphas[i].symbol = neighbors[i];
+    c3.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c3.alphas[0].pState = (-1.0) * log2(0.2);
+  c3.alphas[1].pState = (-1.0) * log2(0.2);
+  c3.alphas[2].pState = (-1.0) * log2(0.1);
+  c3.alphas[3].pState = (-1.0) * log2(0.15);
+  c3.alphas[4].pState = (-1.0) * log2(0.35);
+  for(int i = 0; i < c3.alphas.size(); i++){
+    c3.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c3.alphas[i].maxPrev = NULL;
+  }
+  c3.pReflexive = (-1.0) * log2(0.2);
+
+  //build c4
+  neighbors = {'w','s','d','r','e'};
+  c4.alphas.resize(neighbors.size());
+  for(int i = 0; i < c4.alphas.size(); i++){
+    c4.alphas[i].symbol = neighbors[i];
+    c4.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c4.alphas[0].pState = (-1.0) * log2(0.1);
+  c4.alphas[1].pState = (-1.0) * log2(0.1);
+  c4.alphas[2].pState = (-1.0) * log2(0.3);
+  c4.alphas[3].pState = (-1.0) * log2(0.1);
+  c4.alphas[4].pState = (-1.0) * log2(0.4);
+  for(int i = 0; i < c4.alphas.size(); i++){
+    c4.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c4.alphas[i].maxPrev = NULL;
+  }
+  c4.pReflexive = (-1.0) * log2(0.2);
+
+  //build c5
+  neighbors = {'b','h','j','m','n'};
+  c5.alphas.resize(neighbors.size());
+  for(int i = 0; i < c5.alphas.size(); i++){
+    c5.alphas[i].symbol = neighbors[i];
+    c5.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c5.alphas[0].pState = (-1.0) * log2(0.1);
+  c5.alphas[1].pState = (-1.0) * log2(0.2);
+  c5.alphas[2].pState = (-1.0) * log2(0.1);
+  c5.alphas[3].pState = (-1.0) * log2(0.2);
+  c5.alphas[4].pState = (-1.0) * log2(0.4);
+  for(int i = 0; i < c5.alphas.size(); i++){
+    c5.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c5.alphas[i].maxPrev = NULL;
+  }
+  c5.pReflexive = (-1.0) * log2(0.2);
+
+  //build c6
+  neighbors = {'r','f','g','y','t'};
+  c6.alphas.resize(neighbors.size());
+  for(int i = 0; i < c6.alphas.size(); i++){
+    c6.alphas[i].symbol = neighbors[i];
+    c6.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c6.alphas[0].pState = (-1.0) * log2(0.1);
+  c6.alphas[1].pState = (-1.0) * log2(0.1);
+  c6.alphas[2].pState = (-1.0) * log2(0.2);
+  c6.alphas[3].pState = (-1.0) * log2(0.1);
+  c6.alphas[4].pState = (-1.0) * log2(0.6);
+  for(int i = 0; i < c6.alphas.size(); i++){
+    c6.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c6.alphas[i].maxPrev = NULL;
+  }
+  c6.pReflexive = (-1.0) * log2(0.2);
+
+  //build c7
+  neighbors = {'g','y','u','j','n','b','h'};
+  c7.alphas.resize(neighbors.size());
+  for(int i = 0; i < c7.alphas.size(); i++){
+    c7.alphas[i].symbol = neighbors[i];
+    c7.alphas[i].maxPrev = NULL;
+  }
+  //enumerate the internal probabilities
+  c7.alphas[0].pState = (-1.0) * log2(0.2);
+  c7.alphas[1].pState = (-1.0) * log2(0.2);
+  c7.alphas[2].pState = (-1.0) * log2(0.05);
+  c7.alphas[3].pState = (-1.0) * log2(0.05);
+  c7.alphas[4].pState = (-1.0) * log2(0.05);
+  c7.alphas[5].pState = (-1.0) * log2(0.05);
+  c7.alphas[6].pState = (-1.0) * log2(0.4);
+  for(int i = 0; i < c7.alphas.size(); i++){
+    c7.alphas[i].viterbiMax = ZERO_LOG_PROB;
+    c7.alphas[i].maxPrev = NULL;
+  }
+  c7.pReflexive = (-1.0) * log2(0.2);
+
+  lattice.push_back(c1);
+  lattice.push_back(c2);
+  lattice.push_back(c3);
+  lattice.push_back(c4);
+  lattice.push_back(c5);
+  lattice.push_back(c6);
+  lattice.push_back(c7);
+
+  InitArcSizes(lattice);
+
+  //cout << "Lattice before BuildTransitionModel() ..." << endl;
+  //PrintLattice(lattice);
+
+  BuildTransitionModel(lattice);
+
+  //cout << "Lattice after BuildTransitionModel() ..." << endl;
+  //PrintLattice(lattice);
+
+}
+
+/*
+  Clears the Lattice.  This function is more important than it appears, since for every word of input,
+  we need to build and destroy a lattice model. In itself, this may also change; for instance, if a static
+  lattice is initialized and used, instead of destroying/reallocating every word. The streaming/threaded program model tends to
+  favor dynamic behavior, so the internal memory state of the lattice is always known.
+
+  TODO: Requirements for this function may change accordingly when memory allocation statregies and data-models settle.
+*/
+void LatticeBuilder::ClearLattice(Lattice& lattice)
+{
+  lattice.clear();  //all internal destructors will be called: vector<State>, State.vector<arc>, etc.
+}
+
+
+/*
+  This needs to be manually defined. It would be nice to at least have it read values
+  from a file, instead of needing to be recompiled. Nicer still, to define it with ratios
+  instead of units... hm... different screens may yield different coordinates as well, screwing
+  up the whole mapping...
+  Screens, resolutions, and various keyboard layouts are the parameters. I'm basing this off a typical
+  DELL qwerty keyboard right now.
+
+  TODO: Put this at outermost class level. Doesn't belong here.
+  
+  TODO: Its important to remember that the set of neighbor's defines the possible letters in the output; so if
+  a letter is omitted to eagerly, it may not be possible to correct except with edit-distance logic. Clients
+  of the data structure probably want tight-clusters, though, so this error may be tolerable since later
+  stages should catch it.
+
+  TODO: This is a rigidly-defined structure, according to the visual key layout. Maybe some better software engineering is needed,
+  such as a dynamically-defined key layout generated from a file on the fly, like on-the-fly html generation.
+
+  TODO: Define keyset. Ignoring punctuation and numbers for now.
+
+  TODO: If punct/numbers are included, need to find character n-gram files with these frequencies. The crypto-based files used currently
+  only defined alpha frequencies, not numbers or punctuation, etc.
+
+  */
+void LatticeBuilder::BuildKeyMap(void)
+{
+  pair<Point,vector<char> > p;
+
+  if(!CLASS_keyMap.empty()){
+    CLASS_keyMap.clear();
+  }
+
+  BuildMapCoordinates();
+
+  //q: keyboard neighbors of the letter q
+  CLASS_keyMap['q'].second.push_back('w');
+  CLASS_keyMap['q'].second.push_back('a');
+  p.second.clear();
+  //w
+  CLASS_keyMap['w'].second.push_back('q');
+  CLASS_keyMap['w'].second.push_back('a');
+  CLASS_keyMap['w'].second.push_back('s');
+  CLASS_keyMap['w'].second.push_back('e');
+  p.second.clear();
+  //e
+  CLASS_keyMap['e'].second.push_back('r');
+  CLASS_keyMap['e'].second.push_back('d');
+  CLASS_keyMap['e'].second.push_back('s');
+  CLASS_keyMap['e'].second.push_back('w');
+  p.second.clear();
+  //r
+  CLASS_keyMap['r'].second.push_back('t');
+  CLASS_keyMap['r'].second.push_back('f');
+  CLASS_keyMap['r'].second.push_back('d');
+  CLASS_keyMap['r'].second.push_back('e');
+  p.second.clear();
+
+  //t
+  CLASS_keyMap['t'].second.push_back('y');
+  CLASS_keyMap['t'].second.push_back('g');
+  CLASS_keyMap['t'].second.push_back('f');
+  CLASS_keyMap['t'].second.push_back('r');
+  p.second.clear();
+
+  //y
+  CLASS_keyMap['y'].second.push_back('u');
+  CLASS_keyMap['y'].second.push_back('h');
+  CLASS_keyMap['y'].second.push_back('g');
+  CLASS_keyMap['y'].second.push_back('t');
+  p.second.clear();
+
+    //u
+  CLASS_keyMap['u'].second.push_back('i');
+  CLASS_keyMap['u'].second.push_back('j');
+  CLASS_keyMap['u'].second.push_back('h');
+  CLASS_keyMap['u'].second.push_back('y');
+  p.second.clear();
+
+    //i
+  CLASS_keyMap['i'].second.push_back('o');
+  CLASS_keyMap['i'].second.push_back('k');
+  CLASS_keyMap['i'].second.push_back('j');
+  CLASS_keyMap['i'].second.push_back('u');
+  p.second.clear();
+
+    //o
+  CLASS_keyMap['o'].second.push_back('p');
+  CLASS_keyMap['o'].second.push_back('l');
+  CLASS_keyMap['o'].second.push_back('k');
+  CLASS_keyMap['o'].second.push_back('i');
+  p.second.clear();
+
+    //p
+  CLASS_keyMap['p'].second.push_back('l');
+  CLASS_keyMap['p'].second.push_back('o');
+  p.second.clear();
+
+    //a
+  CLASS_keyMap['a'].second.push_back('q');
+  CLASS_keyMap['a'].second.push_back('w');
+  CLASS_keyMap['a'].second.push_back('s');
+  CLASS_keyMap['a'].second.push_back('z');
+  p.second.clear();
+
+    //s
+  CLASS_keyMap['s'].second.push_back('a');
+  CLASS_keyMap['s'].second.push_back('w');
+  CLASS_keyMap['s'].second.push_back('e');
+  CLASS_keyMap['s'].second.push_back('d');
+  CLASS_keyMap['s'].second.push_back('x');
+  CLASS_keyMap['s'].second.push_back('z');
+  p.second.clear();
+
+    //d
+  CLASS_keyMap['d'].second.push_back('s');
+  CLASS_keyMap['d'].second.push_back('e');
+  CLASS_keyMap['d'].second.push_back('r');
+  CLASS_keyMap['d'].second.push_back('f');
+  CLASS_keyMap['d'].second.push_back('c');
+  CLASS_keyMap['d'].second.push_back('x');
+  p.second.clear();
+
+    //f
+  CLASS_keyMap['f'].second.push_back('d');
+  CLASS_keyMap['f'].second.push_back('r');
+  CLASS_keyMap['f'].second.push_back('t');
+  CLASS_keyMap['f'].second.push_back('g');
+  CLASS_keyMap['f'].second.push_back('v');
+  CLASS_keyMap['f'].second.push_back('c');
+  p.second.clear();
+
+    //g
+  CLASS_keyMap['g'].second.push_back('f');
+  CLASS_keyMap['g'].second.push_back('t');
+  CLASS_keyMap['g'].second.push_back('y');
+  CLASS_keyMap['g'].second.push_back('h');
+  CLASS_keyMap['g'].second.push_back('b');
+  CLASS_keyMap['g'].second.push_back('v');
+  p.second.clear();
+
+
+    //h
+  CLASS_keyMap['h'].second.push_back('g');
+  CLASS_keyMap['h'].second.push_back('y');
+  CLASS_keyMap['h'].second.push_back('u');
+  CLASS_keyMap['h'].second.push_back('j');
+  CLASS_keyMap['h'].second.push_back('n');
+  CLASS_keyMap['h'].second.push_back('b');
+  p.second.clear();
+
+
+    //j
+  CLASS_keyMap['j'].second.push_back('h');
+  CLASS_keyMap['j'].second.push_back('u');
+  CLASS_keyMap['j'].second.push_back('i');
+  CLASS_keyMap['j'].second.push_back('k');
+  CLASS_keyMap['j'].second.push_back('m');
+  CLASS_keyMap['j'].second.push_back('n');
+  p.second.clear();
+
+
+    //k
+  CLASS_keyMap['k'].second.push_back('j');
+  CLASS_keyMap['k'].second.push_back('i');
+  CLASS_keyMap['k'].second.push_back('o');
+  CLASS_keyMap['k'].second.push_back('l');
+  CLASS_keyMap['k'].second.push_back(',');
+  CLASS_keyMap['k'].second.push_back('m');
+  p.second.clear();
+
+
+    //l
+  CLASS_keyMap['l'].second.push_back('k');
+  CLASS_keyMap['l'].second.push_back('o');
+  CLASS_keyMap['l'].second.push_back('p');
+  CLASS_keyMap['l'].second.push_back(',');
+  CLASS_keyMap['l'].second.push_back('.');
+  p.second.clear();
+
+
+    //z
+  CLASS_keyMap['z'].second.push_back('a');
+  CLASS_keyMap['z'].second.push_back('s');
+  CLASS_keyMap['z'].second.push_back('x');
+  p.second.clear();
+
+
+    //x
+  CLASS_keyMap['x'].second.push_back('z');
+  CLASS_keyMap['x'].second.push_back('s');
+  CLASS_keyMap['x'].second.push_back('d');
+  CLASS_keyMap['x'].second.push_back('c');
+  p.second.clear();
+
+
+    //c
+  CLASS_keyMap['c'].second.push_back('x');
+  CLASS_keyMap['c'].second.push_back('d');
+  CLASS_keyMap['c'].second.push_back('f');
+  CLASS_keyMap['c'].second.push_back('v');
+  p.second.clear();
+
+
+    //v
+  CLASS_keyMap['v'].second.push_back('c');
+  CLASS_keyMap['v'].second.push_back('f');
+  CLASS_keyMap['v'].second.push_back('g');
+  CLASS_keyMap['v'].second.push_back('b');
+  p.second.clear();
+
+
+    //b
+  CLASS_keyMap['b'].second.push_back('v');
+  CLASS_keyMap['b'].second.push_back('g');
+  CLASS_keyMap['b'].second.push_back('h');
+  CLASS_keyMap['b'].second.push_back('n');
+  p.second.clear();
+
+    //n
+  CLASS_keyMap['n'].second.push_back('b');
+  CLASS_keyMap['n'].second.push_back('h');
+  CLASS_keyMap['n'].second.push_back('j');
+  CLASS_keyMap['n'].second.push_back('m');
+  p.second.clear();
+
+    //m
+  CLASS_keyMap['m'].second.push_back('n');
+  CLASS_keyMap['m'].second.push_back('j');
+  CLASS_keyMap['m'].second.push_back('k');
+  CLASS_keyMap['m'].second.push_back(',');
+  p.second.clear();
+
+    //,
+  CLASS_keyMap[','].second.push_back('m');
+  CLASS_keyMap[','].second.push_back('k');
+  CLASS_keyMap[','].second.push_back('l');
+  CLASS_keyMap[','].second.push_back('.');
+  p.second.clear();
+
+    //.
+  CLASS_keyMap['.'].second.push_back(',');
+  CLASS_keyMap['.'].second.push_back('l');
+  p.second.clear();
+}
+
+/*
+  TODO: This doesn't belong here, belongs in metaclass.
+
+  Consumes some static data (file, etc) containing key coordinate
+  info, and fill map with that data
+*/
+void LatticeBuilder::BuildMapCoordinates(void)
+{
+  cout << "TODO: BuildMapCoordinates!" << endl;
+}
+
+
+/*
+  Given some euclidean point, map it to a collection of neighbor keyboard keys w/in
+  some search radius, such that any given point yields up to seven keys.
+
+
+  MAY BE OBSOLETE
+*/
+void LatticeBuilder::SearchForNeighborKeys(const Point& p, vector<State>& neighbors)
+{
+  double logProbability;
+  double sumDist = 0.0;  //normalization constant for converting distances to a radial probability
+  char c = FindNearestKey(p);
+
+  for(int i = 0; i < CLASS_keyMap[c].second.size(); i++){
+    State s;
+    s.symbol = CLASS_keyMap[c].second[i];
+    s.pState = DoubleDistance(p,CLASS_keyMap[c].first);
+    sumDist += s.pState;
+    neighbors.push_back(s);
+  }
+
+  for(int i = 0; i < neighbors.size(); i++){
+    neighbors[i].pState /= sumDist;
+    neighbors[i].pState = -1.0 * log2(neighbors[i].pState);  //convert probability to -log2-space
+  }
+}
+
+/*
+  The primary responsibility of this class. Build the lattice, and assign
+  conditional probabilities based on physical distances.
+
+  This is the static, non-streaming version of lattice-building.
+
+  Secondary responsibility is re-conditioning the probabilities based on character n-gram probabilities.
+*/
+void LatticeBuilder::BuildStaticLattice(vector<PointMu>& inData, Lattice& lattice)
+{
+  cout << "in BuildStaticLattice(), inDate.size()=" << inData.size() << endl;
+
+  //for each point in inData, map it to a collection of immediate neighbors (keys), each with a probability with respect to its distance from the point
+  for(int i = 0; i < inData.size(); i++){
+   
+    AppendCluster(inData[i], lattice);
+    //these types are wrong. this should be some graph/lattice type
+    //SearchForNeighborKeys(inData[i],neighbors);  //gets all the neighbors and assigns physical probabilities to each one
+    //lattice.push_back(neighbors);
+  }
+}
+
+/*
+  Given some raw 'tick' value of the number of ticks spent in a given cluster,
+  map this to a likelihood for a reflexive transition in that state. For instance,
+  if the user focuses on 's' for longer, we would like to know if that indicates 'ss' as input,
+  (or possibly some close neighbors of 's', whose transition can't be detected with current system resolution)
+
+  Returns: a real number indicating the likelihood of a reflexive transition. When modelling this numerically, think of 
+  the values with which this one is competing: the forward edges of the lattice. This parameter must be able to compete
+  with these values (in terms of magnitude), if it is to have any use.
+
+
+  TODO: define this more function's behavior once testing begins. It is a precision parameter.
+
+*/
+double LatticeBuilder::ReflexiveLikelihood(U16 ticks)
+{
+  //for now, this is a simple threshold function: exceed threshold, and trigger. This is a discrete strategy,
+  //but one that is likely to work with little calibration.
+  if(ticks >= REFLEXIVE_TICK_THRESHOLD){
+    return 0.5;
+  }
+  
+  return 0.0;
+}
+
+
+/*
+  Given an input (mu, a mean point), append a new cluster.
+  Could search for nearest neighbor points in real-space. Currently,
+  I think it is sufficient to identify the nearest key, and grab its neighbors based
+  on keyboard layout.  
+
+  Input: a point mean, representing a spatial mean point along with the estimate time spent their (which gives the likelihood
+  a reflexive arc occurred for this cluster).
+
+*/
+void LatticeBuilder::AppendCluster(PointMu& mu, Lattice& lattice)
+{
+  int i, j, prevCol;
+
+  //get nearest neighbor keys of point, via pre-defined static key-clusters
+  //TODO: evaluate if static clusters should be used, or continuous value ones. For instance, should 's' alwasy return {aqwedxz} regardless of the focus on 's' key
+  Cluster newCluster(mu);
+  lattice.push_back(newCluster); //i kinda prefer push_back (dynamic addition), as opposed to static=; likely better for streaming
+
+  //Each time a cluster is appended, resize the arc vectors in the previous cluster each to the number of states in this cluster.
+  //But only do so if there is a previous cluster (eg, this is not the start state).
+  if(lattice.size() >= 2){
+    prevCol = lattice.size() - 2; //get the previous column in the lattice
+    for(i = 0; i < lattice[prevCol].alphas.size(); i++){
+      for(j = 0; j < newCluster.alphas.size(); j++){
+        Arc newArc = {&newCluster.alphas[j], newCluster.alphas[j].pState};
+        lattice[prevCol].alphas[i].arcs.push_back(newArc);
+      }
+    }
+  }
+  else{
+    //for the first added column, init the back pointers to null, the maxProb value to a negative flag val
+    for(i = 0; i < newCluster.alphas.size(); i++){
+      newCluster.alphas[i].maxPrev = NULL;
+      newCluster.alphas[i].viterbiMax = INIT_STATE_LOG_PROB;
+    }
+  }
+}
+
+/* 
+  Once---or possibly in streaming fashion, once a new cluster has been appended--
+
+  Try to write this to encompass both states of the lattice: streaming and static lattice models.
+
+  Obviously each arc is composed of a source and a dest, both of which are alphas (letters/keys). Each alpha
+  has a unique index, so each src/dest is an alpha/index pair of type char/int
+  
+  Pre-condition: Each state's arc vector has been appropriately sized. When each cluster is appended, we rely
+  on the arcs to be properly sized at initialization, not here. But this is also dependent on hazy streaming/static
+  requirements.
+
+  Notes: Only builds the extrinsic arcs, does not absorb or otherwise mix probability parameters. Viterbi will do that stuff.
+  Watch how conditioning or other features are applied; using bigrams is okay, but trigrams and above breaks dynamic programming
+  behavior. See Jurafsky SLP Ch. 10. Just things to remember.
+
+  REVISION: I revised this to assign only internal state probabilities to the arcs. N-gram data will no longer be applied to the
+  graph, but instead only to the set of candidate paths it generates. See .hpp for comments about no longer using n-gram data.
+
+
+  Notes: Since we're no longer using arc-conditioning data, storing the arc-probabilities in the arcs themselves is actually redundant, 
+  since we could instead just get the target state's probability while searching. But I'm leaving this in for now, since maybe in the
+  future some other conditioning data on the arcs could be used.
+
+*/
+void LatticeBuilder::BuildTransitionModel(Lattice& lattice)
+{
+  int i, j, k, l;
+
+  /*
+    Starting at the 0th index in lattice, the arcs denote the transition from current alpha to some alpha in next column of the lattice.
+    The last column in the matrix is the end of the word, so there is no next column to which to assign arcs. The <stop> state is simply
+    implied by column size, not flagged anywhere, so don't rely on anything other than the lattice width/size.
+  */
+
+  //iterate up to n-1 columns of the lattice, assigning arcs for every alpha to every alpha in next column. Therefore if columns are n, there will be n^2 arcs.
+  for(i = 0 ; i < lattice.size() - 1; i++){
+  
+    //assume there's a problem if first state's arc != n_states in next col, and resize all arcs in current column to match n_states
+    if(lattice[i].alphas[0].arcs.size() != lattice[i+1].alphas.size()){
+      cout << "WARN resizing arc count for current state, which should have been initialized correctly. In BuildTransitionModel()" << endl;
+      for(j = 0; j < lattice[i].alphas.size(); j++){
+        lattice[i].alphas[j].arcs.resize(lattice[i + 1].alphas.size());
+      }
+    }
+
+    //foreach alpha in current column, assign each of its arcs an edge weight given by an pState of dest-state
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      for(k = 0; k < lattice[i+1].alphas.size(); k++){
+        //init the next_state pointer
+        lattice[i].alphas[j].arcs[k].dest = &lattice[i + 1].alphas[k];
+        //init the log-probability of following that pointer
+        lattice[i].alphas[j].arcs[k].pArc = lattice[i + 1].alphas[k].pState;
+
+        /*  OBSOLETE
+        if(USE_NGRAM_DATA){
+          lattice[i].alphas[j].arcs[k].pArc += BIGRAM_LAMBDA * GetBigramProbability(lattice[i].alphas[j].symbol, lattice[i + 1].alphas[k].symbol); //each arc's probability is given by p(B|A) for path from state A to state B
+          lattice[i].alphas[j].arcs[k].pArc += UNIGRAM_LAMBDA * GetUnigramProbability(lattice[i + 1].alphas[k].symbol); //each arc's probability is given by p(B|A) for path from state A to state B
+          lattice[i].alphas[j].arcs[k].pArc *= NGRAM_MODEL_WEIGHT;
+          //cout << "appended arc (" << lattice[i].alphas[j].symbol << i << "->" << lattice[i].alphas[j].arcs[k].dest->symbol << (i+1) << "," << lattice[i].alphas[j].arcs[k].pArc << ")" << endl;
+        }
+        else{
+          lattice[i].alphas[j].arcs[k].pArc = 0.0; //effectively initial arc weight becomes a dont-care if set to 1.0
+        }
+        */
+      }
+    }
+  }
+  
+}
+
+
+
+
+/*
+
+  Re-condition arcs based on n-gram probabilities (likely bi-gram data will be sufficient)
+
+void LatticeBuilder::ConditionArcs(Lattice& lattice)
+{
+  //let p(arc_physical) be the physically-assigned probability based solely on location in relation to neighboring keys
+
+  //for arc in lattice:
+  // p(arc) = p(arc_physical|alpha,beta)
+  // giving:
+  // p(arc) = p(arc_physical)*p(alpha|beta)
+}
+*/
+
+
+
+

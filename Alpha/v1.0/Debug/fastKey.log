@@ -1,0 +1,41 @@
+﻿Build started 11/14/2014 7:04:16 PM.
+     1>Project "c:\Users\Jesse\documents\visual studio 2010\Projects\fastKey\fastKey\fastKey.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Touching "Debug\fastKey.unsuccessfulbuild".
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp signal.cpp
+         signal.cpp
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(73): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\string.h(105) : see declaration of 'strcpy'
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(91): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(105): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(87): warning C4101: 'p' : unreferenced local variable
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(88): warning C4101: 'i' : unreferenced local variable
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(88): warning C4101: 'dTheta' : unreferenced local variable
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(125): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(153): warning C4018: '<' : signed/unsigned mismatch
+         main.cpp
+         Generating Code...
+     1>c:\users\jesse\documents\visual studio 2010\projects\fastkey\fastkey\signal.cpp(100): warning C4700: uninitialized local variable 'trigger' used
+       ManifestResourceCompile:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\rc.exe /nologo /fo"Debug\fastKey.exe.embed.manifest.res" Debug\fastKey_manifest.rc 
+       Link:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\fastKey.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.lib" /MACHINE:X86 Debug\fastKey.exe.embed.manifest.res
+         Debug\main.obj
+         Debug\signal.obj
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /out:"Debug\fastKey.exe.embed.manifest" /manifest Debug\fastKey.exe.intermediate.manifest
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\rc.exe /nologo /fo"Debug\fastKey.exe.embed.manifest.res" Debug\fastKey_manifest.rc 
+       LinkEmbedManifest:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\fastKey.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.lib" /MACHINE:X86 Debug\fastKey.exe.embed.manifest.res
+         Debug\main.obj
+         Debug\signal.obj
+         fastKey.vcxproj -> c:\users\jesse\documents\visual studio 2010\Projects\fastKey\Debug\fastKey.exe
+       FinalizeBuildStatus:
+         Deleting file "Debug\fastKey.unsuccessfulbuild".
+         Touching "Debug\fastKey.lastbuildstate".
+     1>Done Building Project "c:\Users\Jesse\documents\visual studio 2010\Projects\fastKey\fastKey\fastKey.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:03.22

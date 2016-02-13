@@ -1,0 +1,139 @@
+import java.io.*;
+import java.nio.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.Map;
+import java.util.Comparator;
+
+
+
+
+/*
+public class Point
+{
+  int m_X;
+  int m_Y;
+  public Point(){
+    m_X = 0;
+    m_Y = 0;
+  }
+  public Point(int x, int y){
+    SetXY(x,y);
+  }
+  public void InitPoint(Point p){
+    m_X = p.GetX();
+    m_Y = p.GetY();
+  }
+  public int GetX(){
+    return m_X;
+  }
+  public int GetY(){
+    return m_Y;
+  }
+  public void SetXY(int X, int Y){
+    m_X = X;
+    m_Y = Y;
+  }
+  public void SetY(int Y){
+    m_Y = Y;
+  }
+  public void SetX(int X){
+    m_X = X;
+  }
+  @Override
+  public String toString(){
+    return "("+Integer.toString(m_X)+","+Integer.toString(m_Y)+")";
+  }
+  public static double DoubleDistance(Point p1, Point p2){
+    return Math.sqrt(Math.pow((double)(p1.GetX() - p2.GetX()),2.0) + Math.pow((double)(p1.GetY() - p2.GetY()),2.0));
+  }
+} //end Point class
+
+// a PointMu (mu like mean) represents a trigger point or a cluster center for a sequence of x/y inputs.
+// This may be either something discrete like a key press, or something stochastic, like "I think there was a click here" and my_ticks determines the likelihood of a click
+public class PointMu
+{
+  char m_alpha;
+  Point m_pt;
+  int m_ticks;
+
+  public PointMu(){
+    m_pt.SetXY(0,0);
+    m_ticks = 0;
+    m_alpha = 'A';
+  }
+  public PointMu(Point point, int ticks){
+    m_pt = new Point(point.GetX(), point.GetY());
+    m_ticks = ticks;
+    m_alpha = 'A';
+  }
+  public PointMu(Point point, int ticks, char c){
+    m_pt = new Point(point.GetX(), point.GetY());
+    m_ticks = ticks;
+    m_alpha = c;
+  }
+  public void SetAlpha(char c){
+    m_alpha = c;
+  }
+  public void SetPoint(Point pt){
+    m_pt.SetXY(pt.GetX(),pt.GetY());
+  }
+  public void SetTicks(int t){
+    m_ticks = t;
+  }
+  public char GetAlpha(){
+    return m_alpha;
+  }
+  public int GetTicks(){
+    return m_ticks;
+  }
+  public Point GetPoint(){
+    return m_pt;
+  }
+} //end PointMu class
+*/
+
+
+  //Every key has a char id, a location (Point), and a list of its neighbors (as a string)
+public class Key  {
+    char m_id;
+    Point m_center;
+    String m_neighbors; //raw neighbors are just stored as a string
+ 
+    public Key(){
+      m_id = '\0';
+      m_neighbors = "";
+    }
+    public Key(char c, String neighborStr){
+      m_id = c;
+      m_neighbors = neighborStr;
+    }
+    public String GetNeighbors(){
+      return m_neighbors;
+    }
+    public char GetId(){
+      return m_id;
+    }
+    public Point GetPoint(){
+      return m_center;
+    }
+    public void SetNeighbors(String neighbors){
+      m_neighbors = neighbors;
+    }
+    public void SetPoint(Point p){
+      m_center.SetXY(p.GetX(), p.GetY());
+    }
+    public void SetPoint(int x, int y){
+      m_center.SetXY(x,y);
+    }
+
+  public static void main(String[] args){
+    Key key = new Key('B',"ABCDEGH");
+
+    System.out.println("ERROR key >"+key.GetId()+"< not found in map!");
+  }
+
+}

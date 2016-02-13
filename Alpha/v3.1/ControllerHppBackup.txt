@@ -1,0 +1,82 @@
+#ifndef CONTROLLER_HPP
+#define CONTROLLER_HPP
+
+/*
+#ifndef SINGULARITYBUILDER_HPP
+#include "SingularityBuilder.hpp"
+#endif
+
+#ifndef LATTICEBUILDER_HPP
+#include "LatticeBuilder.hpp"
+#endif
+
+#ifndef SEARCHENGINE_HPP
+#include "SearchEngine.hpp"
+#endif
+
+#ifndef LANGUAGEMODEL_HPP
+#include "LanguageModel.hpp"
+#endif
+*/
+//#include "Header.hpp"
+
+
+#include "SingularityBuilder.hpp"
+#include "LatticeBuilder.hpp"
+#include "SearchEngine.hpp"
+#include "LanguageModel.hpp"
+
+
+/*
+  This is the main application class, the container for all of the sub-classes.
+  Anything in global scope goes here, anything to do with sub-class access to 
+  various data structures, etc.
+  
+  The primary responsibilities of this class are managing the global data models
+  (the key map) and functions, but also interfacing with the user application.
+  For instance, this class is responsible for getting and mapping the key map
+  from the user application, but in the future it may oversee threaded operations
+  to run the core pipe-chain algorithm in a streaming manner.
+*/
+
+class Controller{
+  private:
+    //primary application components. these are defined by their reponsibilities, not their implementation (though there is some overlap of responsibilities)
+    SingularityBuilder sb;
+    LatticeBuilder lb;
+    SearchEngine se;
+    LanguageModel lm;
+
+    //global data model
+    KeyMap keyMap;
+    
+  public:
+    Controller(const string& keyFileName);
+    ~Controller();
+
+    void SmokeTest(void);
+    void PerformanceTest(const string& srcDir);
+    void TestWordStream(const string& fname, string delimiter);
+    
+    //Controller maintains these interfaces to ui application, also threading/streaming stuff if we do that
+    void BuildKeyMapClusters(void);
+    void BuildMapCoordinates(const string& keyFileName);
+    char FindNearestKey(const Point& p);
+    void SearchForNeighborKeys(const Point& p, vector<State>& neighbors);  //might be obsolete
+    vector<char>* GetNeighborPtr(char index);    
+    Point GetPoint(char symbol);
+
+    static double DoubleDistance(const point& p1, const point& p2);
+    static short int IntDistance(const point& p1, const point& p2);
+    static long double DiffTimeSpecs(struct timespec* begin, struct timespec* end);
+
+};
+
+#endif
+
+
+
+
+
+
+

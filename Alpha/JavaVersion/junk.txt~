@@ -1,0 +1,61 @@
+      keyMap.put('Q', new String("WA"));
+      // w
+      keyMap.put('W', new String("QASE"));
+      // e
+      keyMap.put('E', new String("RDSW"));
+      // r
+      keyMap.put('R', new String("TFDE"));
+      //t
+      keyMap.put('T', new String("YGFR"));
+      //y
+      keyMap.put('Y', new String("UHGT"));
+      //u
+      keyMap.put('W', new String("IJHY"));
+      //i
+      keyMap.put('I', new String("OKJU"));
+      //o
+      keyMap.put('O', new String("PLKI"));
+      //p
+      keyMap.put('P', new String("LO;"));
+      //a
+      keyMap.put('A', new String("QWSZ"));
+      //s
+      keyMap.put('S', new String("AWEDXZ")); 
+      //d
+      keyMap.put('D', new String("SERFCX"));
+      //f
+      keyMap.put('F', new String("DRTGVC"));
+      //g
+      keyMap.put('G', new String("FTYHBV"));
+      //h
+      keyMap.put('H', new String("GYUJNB"));
+      //j
+      keyMap.put('J', new String("HUIKMN"));
+      //k
+      keyMap.put('W', new String("JIOL,M"));
+      //l
+      keyMap.put('L', new String("KOP;.,"));
+      //;
+      keyMap.put(';', new String("PL.?\""));
+      //"
+      keyMap.put('\"', new String(";?"));
+      //z
+      keyMap.put('Z', new String("ASX"));
+      //x
+      keyMap.put('X', new String("ZSDC"));
+      //c
+      keyMap.put('C', new String("XDFV"));
+      //v
+      keyMap.put('V', new String("CFGB"));
+      //b
+      keyMap.put('B', new String("VGHN"));
+      //n
+      keyMap.put('N', new String("BHJM"));
+      //m
+      keyMap.put('M', new String("NJK,"));      
+      //,
+      keyMap.put(',', new String("MKL."));
+      //.
+      keyMap.put('.', new String(",;?L"));
+      //?
+      keyMap.put('?', new String(".;\""));

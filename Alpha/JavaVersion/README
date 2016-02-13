@@ -1,0 +1,34 @@
+This directory contains the FastMode implementation java classes. FastMode is completely abstracted away from the sensor
+hardware and ui components, it just takes in a raw (x,y) data stream, finds the 'key events' within the stream, then
+outputs this sequence of events to the DirectInference process, which returns a list of words. The resources directory
+contains the necessary components for FastMode to work, as well as some test inputs.
+
+
+~~~~Compilation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To compile on the command line:
+  javac -g Utilities.java Point.java PointMu.java Key.java KeyMap.java SignalProcessor.java DirectInference.java FastMode.java SearchResult.java
+
+
+~~~~Running from cmd line~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To run test file inputs:
+  java FastMode ./resources -p
+
+To run regression tests:
+  java FastMode ./resources -r
+
+
+~~~~Running from cmd line~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The -p option:
+  The test file inputs are a bunch of files, each of which contains an example sensor (x,y) data stream for a single word.
+  So running the -p option just reads in each of these files as if they were a real input stream. I generated these files by 
+  running the eye tribe and moving my eye to simulate tracing each word on the screen, in a 'somewhat' quick manner. This was
+  to simulate the intended usage / user state machine: user makes a word trace, then looks at spacebar, sending the raw input
+  stream to the inference engine (so note its not yet realtime: the user makes a complete trace, terminates it, then it is
+  sent to the inference engine). The input was "the quick brown fox jumped over the lazy dog in bilox mississippi" which
+  is a fairly challenging test case. I did "brown fox" without terminating, so you'll see "brownfox" as a single word,
+  but this is just because I didn't hit spacebar while generating the files for brown and fox.
+
+The -r option:
+  Running the -r option executes a few very simple regression tests I built. I will add more later, as the requirements become clearer.
+
+-JW

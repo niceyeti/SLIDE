@@ -1,0 +1,1 @@
+all: ; gcc -Wall xLibListener.c -o listener -lX11

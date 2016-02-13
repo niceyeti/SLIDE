@@ -1,0 +1,41 @@
+
+def isValidString(string):
+  for char in string:
+    if char not in "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM":
+      print "not valid? ",string
+      return False
+  return True
+
+
+def scrubLine(aline):
+  retline = aline.strip()
+  if isAlphaString(retline):
+    return retline
+
+
+i = 0
+ifile = open("./resources/vocabModel.txt","r")
+lines = ifile.readlines()
+olines = []
+for line in lines:
+  #if len(line.strip()) <= 3:
+    #print line.strip()
+    #i += 1 
+  if isValidString(line.strip()):
+    olines.append(line.strip())
+
+ifile.close()
+ofile = open("./resources/vocabModelOut.txt","w+")
+for line in olines:
+  ofile.write(line.strip()+"\n")
+ofile.close()
+
+
+print "done. i=",str(i)
+
+
+
+
+
+
+

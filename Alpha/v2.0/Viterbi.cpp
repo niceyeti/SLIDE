@@ -1,0 +1,553 @@
+#include "Viterbi.hpp"
+
+/*
+  Take in a lattice and run the Viterbi algorithm over it.
+
+  Currently, just finds top path through the graph. In the future, get top k-paths
+  
+  TODO: figure out if this needs to use log-probabilities. I'm almost certain it does, I'm just being lazy.
+
+*/
+void Viterbi::Process(Lattice& lattice, LatticePaths& wordList)
+{
+  double maxArc;
+
+  //PrintLattice(lattice);
+
+  //first absorb state probs in arcs. this is nice because we only need to evaluate arcs, as a normal weighted, directed graph
+  AbsorbStateProbabilitiesInArcs(lattice);
+  
+  //sort the arcs, so we can just traverse the most likely paths
+  //SortArcs(lattice);
+  
+  //run viterbi algorithm. Currently only returns the single most-likely word, instead of some permutation of the input code.
+  RunViterbi(lattice, wordList);
+  //PrintLattice(lattice);
+}
+
+//REVISION: modified this to follow pState instead of edge probabilities, since I decided to use only a first-order model/lattice.
+void Viterbi::DFS(State* curState, char prefix[256], double cumulativeProb, int curDepth, const int depthBound, LatticePaths& resultList)
+{
+  prefix[curDepth-1] = curState->symbol;
+
+  //base case: at end of lattice (or depth bound), push 
+  if(curDepth >= depthBound){
+
+    if(curState->arcs.size() != 0){
+      cout << "ERROR curState->arcs.size() != 0 in DFS  size=" << curState->arcs.size() << " curDepth=" << curDepth << endl;
+    }
+
+    LatticePath path;
+    path.first = prefix;
+    //path.first += curState->symbol;
+    path.second = cumulativeProb;
+    resultList.push_back(path);
+    //cout << "pushed: " << path.first << ":" << path.second << " at curDepth==depthBound==" << depthBound << endl;
+  }
+  else{
+    if(curState == NULL){
+       cout << "ERROR curState NULL in DFS" << endl;
+    }
+
+    for(int i = 0; i < curState->arcs.size(); i++){
+      //prefix[curDepth] = curState->arcs[i].dest->symbol;
+      DFS( curState->arcs[i].dest, prefix, curState->arcs[i].dest->pState + cumulativeProb, curDepth+1, depthBound, resultList);
+    }
+  }
+}
+
+/*
+  TODO: write this. Estimate the pruning threshold by traversing the entire graph, along the most probable path. This
+  gives the log-prob of the best path. But then back-up one or two levels, and search for the worst path from that grandparent
+  node. Then use this "worst of the best" estimate as the pruning threshold. The goal is to be sure the pruning threshold
+  generates enough of the search space that the real word will be in the result set with high confidence, but also eliminate
+  as much of the needless part of the search space as possible. The more this heuristic hones toward "worser" behavior, the better
+  that recall will be; the more toward "better" (a smaller pruning threshold) the more the of the search space that can be eliminated.
+
+  The estimator therefore gives an estimate of best/worst path vals for k^2 values, which should be a good estimate.
+  The idea is to still capture strings with an error of maybe one or two characters.
+
+  Precondition: this function entirely relies on a first-order graph representation, where state probabilities completely
+  define transition probabilities (no edge probabilities).
+
+  Precond: Caller responsible for only calling this on sufficient-size lattices, say > 4 columns or so.
+*/
+double Viterbi::WorstBestHeuristic(Lattice& lattice)
+{
+  int i, j, k, bestState, rthird, worstState;
+  double best, worst, worstBestPath = 99.0;
+
+  //caller: only run heuristic if graph is larger than some threshold. Its fine to enumerate the entire search space of small graphs (n < 4 in k^n).
+  if(lattice.size() > 3){
+
+    worstBestPath = 0.0;
+    //iterate up to the third-from-right column, accumulating probability of best path
+    for(i = 0; i < lattice.size() - 2; i++){
+      best = ZERO_LOG_PROB;
+      for(j = 0; j < lattice[i].alphas.size(); j++){
+        if(best > lattice[i].alphas[j].pState){ //follow best state in each column
+          bestState = j;
+          best = lattice[i].alphas[j].pState;
+        }
+      }
+      worstBestPath += lattice[i].alphas[bestState].pState;
+    }
+    //post-loop: have cumulative best path up to third to last column, and have best state in that col
+
+    //now follow worst-state links through remaining columns
+    for( ; i < lattice.size(); i++){
+      worst = 0.0;
+      for(j = 0; j < lattice[i].alphas.size(); j++){
+        if(worst < lattice[i].alphas[j].pState){ //look for worst state in this column
+          worstState = j;
+          worst = lattice[i].alphas[j].pState;
+        }
+      }
+      worstBestPath += lattice[i].alphas[worstState].pState;
+    }
+  }
+  cout << "returning worstBestPath=" << worstBestPath << " i=" << i << " lattice.size()=" << lattice.size() << endl;
+
+  return worstBestPath;
+}
+
+/*
+  Simple variant of DFS: prunes any sub-path whose cumulative probability exceeds some threshold.
+
+  Likely the threshold would be determined by some probe: could perhaps use viterbi for this, since it finds the best path
+  in linear time; then apply some scalar to the log probability of the best path. For example, if viterbi gives back likeliest
+  path with log-prob of 20.0, then let scalar=1.5, and prune away any subpath that exceeds 1.5*20=30.
+
+  TODO: not really a todo, just a special note. Traversal use to be edge-driven; with first-order graphs, I'm using pState instead.
+
+*/
+void Viterbi::PrunedDFS(State* curState, char prefix[256], double cumulativeProb, const double pruneThresholdProb, int curDepth, const int depthBound, LatticePaths& resultList)
+{
+  double prob;
+  prefix[curDepth-1] = curState->symbol;
+
+  //base case: at end of lattice (or depth bound), push 
+  if(curDepth >= depthBound){
+
+    if(curState->arcs.size() != 0){
+      cout << "ERROR curState->arcs.size() != 0 in DFS  size=" << curState->arcs.size() << " curDepth=" << curDepth << endl;
+    }
+
+    LatticePath path;
+    path.first = prefix;
+    path.second = cumulativeProb;
+    resultList.push_back(path);
+    //cout << "pushed: " << path.first << ":" << path.second << " at curDepth==depthBound==" << depthBound << endl;
+  }
+  else{
+    if(curState == NULL){
+       cout << "ERROR curState NULL in DFS" << endl;
+    }
+
+    for(int i = 0; i < curState->arcs.size(); i++){
+      //only search subpaths whose cumulative probability could possibly lead to better-than-average results (or some other heuristic)
+      prob = curState->arcs[i].dest->pState + cumulativeProb;
+      if(prob < pruneThresholdProb){
+        PrunedDFS( curState->arcs[i].dest, prefix, prob, pruneThresholdProb, curDepth+1, depthBound, resultList);
+      }
+    }
+  }
+}
+
+/*
+  Part of search pruning heauristic. Given some partial search of the total search space,
+  try and estimate the threshold after which searching further is of no utility. This is
+  somewhat an informal beam search; the search behavior could probably be formally characterized
+  such that a nearly optimal heuristic like A* could be used.
+
+  Obviously the only way for this function to be of any worth, the work required to generate a heuristic
+  value must be less than the savings in unnecessary processing.
+
+  Running pruned dfs graph search...
+  min=72.3542  max=152.32  avg=115.277  threshold=112.337
+
+  We really want a tight threshold. One that will eliminate all but a few top results in the sublist (if sublist itself was pruned).
+
+*/
+double Viterbi::ThresholdHeuristic(LatticePaths& subList)
+{
+  LatticePathsIt it;
+  long double max, min;
+  //dbg only
+  long double avg = 0;
+
+  min = ZERO_LOG_PROB;
+  max = 0;
+  for(it = subList.begin(); it != subList.end(); ++it){
+    if(min > it->second){
+      min = it->second;
+    }
+    if(max < it->second){
+      max = it->second;
+    }
+    avg += it->second;
+  }
+  //cout << "min=" << min << "  max=" << max << "  avg=" << (avg / subList.size()) << "  threshold=" << ((max - min) / 2 + min) << endl;
+  //TODO: could try linear search, or sublist sort, methods for finding a very tight pruning bound, say, from sublist.sorted()[10]
+  avg /= subList.size();
+  /* Have the min, max vals from the list, now score and give a value for pruning. The longer the sublist,
+     the more confident we can be in giving back a smaller value, which is how I came up with the threshold function.
+     The sublist is likely some local space within the entire search space, so we can rely on its variance being somewhat
+     low, such that taking the mid of the two points won't be a too-severe pruning threshold.
+     This function is designed to give a tight estimate.
+  */
+
+  //return the midpoint between max and min. some greedier value could do better...
+  //return (max - min) / 2 + min;
+
+  //...so just return min plus a small constant!
+  //return min + 10;
+
+  //in most cases, this will function well, but its still arbitrary wrt factors like list.size(). returns min + c, where c is defined in terms of list.size(), avg, and max
+  //cout << "min was: " << min << endl;
+  min += ((avg - min) * 0.1);
+  //cout << "min is: " << min << endl;
+  return min;
+}
+
+
+/*
+  Needs to be synced with RunExhaustiveSearch, if that function is revised. Also the inner driver PrunedDFS.
+
+*/
+void Viterbi::RunPrunedSearch(Lattice& lattice, LatticePaths& results, int depthBound)
+{
+  int depth;
+  char prefix[256];
+  double pruneThreshold;
+
+  prefix[lattice.size()] = '\0';
+  prefix[lattice.size()+1] = '\0';
+  
+  //TODO: not necessary if sticking with first-order lattice model
+  AbsorbStateProbabilitiesInArcs(lattice);
+
+  if(depthBound < 0){
+    depth = lattice.size();
+  }
+  else{
+    depth = depthBound;
+  }
+
+  //first, probe from the first state in the first column to get some idea of the probability bounds
+//DFS(&lattice[0].alphas[0], prefix, lattice[0].alphas[0].pState, 1, depth, results);
+//pruneThreshold = ThresholdHeuristic(results);  //get the min and max values from this result list of appximately n^(k-1) elements
+  pruneThreshold = WorstBestHeuristic(lattice);  //returns the worst of the near-best case paths: the worst path from the grandparent of the best path's last child
+
+  //now iterate and prune-search the rest of the sub-paths remaining in the searh space (all n^k - n^k-1 of them)
+  for(int i = 1; i < lattice[0].alphas.size(); i++){
+    //prefix[0] = lattice[0].alphas[i].symbol;
+    PrunedDFS(&lattice[0].alphas[i], prefix, lattice[0].alphas[i].pState, pruneThreshold, 1, depth, results);
+  }
+  //cout << "after dfs, result.size()=" << results.size() << "\nsorting..." << endl;
+
+  //finally, sort the output
+  results.sort(ByLogProb);
+
+}
+
+/*
+  Viterbi currently only returns the most likely path through the graph, whereas we may be interested in getting a list of all
+  possible paths, ranked by their total probability. This is an exhaustive and exponential search: if there are n lattice columns, 
+  each with k states, then this is k^n. This may be tolerable for small word inputs (n < 10, k <= 7). There are also approximation algorithms
+  for getting the n-best lists, but we may instead be able to tune directly toward our expected inputs:
+    -expect n to range from 5-8 in most cases (average english word length)
+    -expect k to range from 4-7
+
+  With pruning, it shouldn't be too hard to vastly decrease the size of the search space, for instance by (dumbly) pruning states 
+  with a likelihood below some threshold, say < 0.10 (these would be neighbor keys in some cluster with very high distance from the
+  mean point of the cluster). The threshold would best be determined by the geometric distance of 1.5 keys, or some such thing: omit
+  any state in a cluster that is, say, 1.2 key distances from the mean point mu.
+  As far as the target of reducing the search space, note that 
+  
+  For n > 10, this function begins to explode. 5 ^ 10 == 1,000,000 ... 5^12 == 244,000,000
+
+  TODO: It would be smart to depth-bound this function. Words of greater length are far easier to auto-complete: once you have some
+  input characters, it becomes easier and easier to predict the word. So this function doesn't even need to search for the whole word,
+  it could instead derive partial parses, then pass the output to an AutoComplete class to check for possible completions. Aside from
+  all that, just apply classical search ideas, since at this point, its just a search problem.
+
+  If depthBound == -1, ignore bound and do exhaustive search.
+
+  Pre-condition: Lattice initialized, not conditioned. Allow this function to take responsibility for conditioning,
+  absorbing arcs, etc.
+
+  TODO: write DFS in iterative form, instead of recursion. Analyze speed benefits.
+
+*/
+void Viterbi::RunExhaustiveSearch(Lattice& lattice, LatticePaths& results, int depthBound)
+{
+  int depth;
+  char prefix[256];
+
+  prefix[lattice.size()] = '\0';
+  prefix[lattice.size()+1] = '\0';
+
+  AbsorbStateProbabilitiesInArcs(lattice);
+
+  if(depthBound < 0){
+    depth = lattice.size();
+  }
+  else{
+    depth = depthBound;
+  }
+
+  for(int i = 0; i < lattice[0].alphas.size(); i++){
+    //prefix[0] = lattice[0].alphas[i].symbol;
+    DFS(&lattice[0].alphas[i], prefix, lattice[0].alphas[i].pState, 1, depth, results);
+  }
+  //cout << "after dfs, result.size()=" << results.size() << "\nsorting..." << endl;
+
+
+
+/*  //fragments of an iterative approach
+  //init the stack:
+  for(i = 0; i < )
+
+  for(a = 0; a < ){
+    for(i = 0; i < lattice.size()-1; i++){
+      for(j = 0; j < lattice[i].alphas.size(); j++){
+        for(k = 0; k < lattice[i].alphas[j].arcs.size(); k++){
+          lattice[i].alphas[j].[k]
+
+        }
+      }
+    }
+  }
+
+      for(j = 0; j < lattice[i].alphas.size(); j++){
+        for(k = 0; k < lattice[i].alphas[j].arcs.size(); k++){
+          //this could also build path (word) by following backlinks, instead of accumulating. looks like i, j, k, uniquely identify it
+          path.first = prefix;
+          path.first += lattice[i].alphas[j].arcs[k].dest->symbol;
+          path.second += lattice[i].alphas[j].arcs[k].pArc;
+          results.push_back(path);
+        }
+      }
+*/
+
+
+  //finally, sort the output
+  results.sort(ByLogProb);
+}
+
+//print first 100 results
+void Viterbi::PrintResultList(LatticePaths& results)
+{
+  U32 i;
+  LatticePathsIt it;
+
+  cout << "first 45 of " << results.size() << " results:" << endl;
+  for(it = results.begin(), i = 0; i < 200 && it != results.end(); ++it){
+    cout << i++ << ": " << it->first << " " << it->second << endl;
+  }
+}
+
+
+
+/*
+  Description: From left to right, go through map assigning max likely path probability to each successive State[i+1].
+  
+  See literature for more info on the Viterbi algorithm. Other variants may be (and perhaps should) be used, eg, to get
+  the max k-number of most likely paths w/out enumerating all paths.  This version returns only the max likelihood path,
+  and doesn't support n-best lists (except if you devise some clever scheme to do so). It works in two stages: the first
+  stage runs from left to right through the lattice assigning the max likelihood incoming path, given all previous inputs,
+  to each state. Each time a max is found, a backptr is assigned to that state, to maintain back-links for the path. That's
+  mouthful, but consider starting across the graph: in the second column, we check which of our incoming arcs maximizes the
+  total probability of each state. Once complete, repeat for the next column, up to the end (and note the recursivity). By the
+  end of the graph, the best path is simply the most likely one selected from the last set of states, since the likelihoods
+  accumulated from all previous paths.
+
+  Complexity: |V|*|E| (nVertices*nEdges)
+
+  Returns: The single-shortest path through the graph.
+
+  TODO: This function relies on Absorption() as a precondition, but in reality this calculate could instead be done w/in this function
+  as we traverse the graph. That way we wouldn't need to iterate the grpah twice.  Fix when data models settle. For extensibility it is
+  nice to have it as a two-stage process, since conditioning could take various parameters.
+
+  Notes: Notice that converting probabilities to -log2-space is convenient because we can optimize by minimizing -log2-space paths; this
+  allows the use of classical shortest-path algorithms for finding least cost routes, when we're actually maximizing likelihoods.
+
+  TODO: lots of pointer/index magic here, high risk of problems with many possible data structure states. Define and test these states rigidly.
+
+*/
+void Viterbi::RunViterbi(Lattice& lattice, LatticePaths& results)
+{
+  int i, j, k;
+  double mostLikely;
+  State* endState;
+
+//cout << "last col n_alphas: " << lattice[lattice.size()-1].alphas.size() << endl;
+
+  //iterate forward (i think textbooks call this forward-messaging, but I'm not sure they're equivalent)
+  for(i = 0; i < lattice.size() - 1; i++){
+
+    //given arc outgoing from this column, assign max probability to states in the next column, maintaining back pointers.
+    //Foreach state in this column, iterate each state's arcs
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      //iterate the arcs in this state to find and assign target state maxima in next column
+      for(k = 0; k < lattice[i].alphas[j].arcs.size(); k++){
+        
+        //cout << "hidy vmax is: " << lattice[i].alphas[j].arcs[k].dest->viterbiMax << endl;
+        //less-than logic is correct. Since we're using log-probabilities, smaller values maximize likelihoods.
+        if(lattice[i].alphas[j].arcs[k].pArc < lattice[i].alphas[j].arcs[k].dest->viterbiMax){
+          //left-hand operands are states in the next right column. Dont be fooled by i-indices: following the pointer, its an i+1 state.
+          lattice[i].alphas[j].arcs[k].dest->viterbiMax = lattice[i].alphas[j].arcs[k].pArc;
+          lattice[i].alphas[j].arcs[k].dest->maxPrev = &lattice[i].alphas[j];
+        }
+      }
+    }
+  }
+  //post-state: all maxPrev pointers point backward along path of maximum probability. maxPrev's in first column are null.
+  //Back pointers are good to go, so now follow them along, building the least-cost path. The steps below just build the ouput.
+
+  //find min state in last column, starting point for the backtrack (min, since log2-space; which is a max in probability space)
+  mostLikely = ZERO_LOG_PROB;
+  endState = NULL;
+  for(i = 0; i < lattice[lattice.size() - 1].alphas.size(); i++){
+    if(lattice[lattice.size() - 1].alphas[i].viterbiMax < mostLikely && lattice[lattice.size() - 1].alphas[i].viterbiMax > 0.0){
+      endState = &lattice[lattice.size() - 1].alphas[i];
+      mostLikely = lattice[lattice.size() - 1].alphas[i].viterbiMax;
+    //cout << "assigned. vmx=" << lattice[lattice.size() - 1].alphas[i].viterbiMax << endl; 
+    }
+  }
+  if(endState == NULL){
+    cout << "ERROR endState null in RunViterbi()" << endl;
+  }
+
+  //now that we have the max-likely ending state, simply backtrack from there, following pointers and building the output string
+  string rmessage;
+  while(endState != NULL){
+    rmessage += endState->symbol;
+    endState = endState->maxPrev;  //just follow the back-links initialized in the previous steps
+  }
+  //post-state: we have a string representing the reverse of the most likely message encoded by the most likely path
+  //cout << "rmessage=" << rmessage << endl;
+
+  //unreverse the message for the output word
+
+  LatticePath message;
+  for(i = rmessage.size()-1; i >= 0; i--){
+    message.first += rmessage[i];
+  }
+  message.second = 1.0;
+
+  results.push_front(message);
+}
+
+//Comparison function for sorting arc's by probability, in ascending order, min item first. 
+bool maxArcLikelihood(const Arc& left, const Arc& right)
+{
+  return left.pArc < right.pArc;
+}
+
+/*
+  Once the dest settles on all the probability initializations, sort the arcs.
+  
+  TODO: The size of each vector is about a max of 7 items, so std::sort may be overkill. This could be optimized by writing a sort routine for few items (insert sort, etc.)
+*/
+void Viterbi::SortArcs(Lattice& lattice)
+{
+  int i, j;
+
+  //foreach column
+  for(i = 0; i < lattice.size(); i++){
+    //foreach state in this column, sort its outgoing arcs by max probability
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      std::sort(lattice[i].alphas[j].arcs.begin(), lattice[i].alphas[j].arcs.end(), maxArcLikelihood);
+    }
+  }
+}
+
+
+/*
+    A given arc from state A to B is defined by the probability p(B|A)*p(B), where p(B|A) is likely some n-gram conditioning data,
+    and p(B) is the base probability of state B.
+    
+
+    TODO: This doesn't handle reflexive arcs, which will likely factor into this math somehow, although it would be best to factor out those considerations (normals, etc)
+    and to instead catch reflexive behavior at some out layer of processing. I haven't worked it out yet, but technically the summation of outgoing arcs is the metaprobability of
+    transitioning from one column in the lattice to the next; so 1.0 minus this value if the probability of staying in the current column (reflexively).
+
+    TODO: This could be nested within the Viterbi algorithm itself, such that we don't have to iterate the whole lattice twice.
+
+*/
+void Viterbi::AbsorbStateProbabilitiesInArcs(Lattice& lattice)
+{
+  int i, j, k;
+    
+  //iterate up to n-1 columns of the lattice, assigning arcs for every alpha to every alpha in next column. Therefore if columns are n, there will be n^2 arcs.
+  for(i = 0; i < lattice.size() - 1; i++){
+  
+    //foreach State in current column, multiply each of its outgoing arcs by the probability of the target state
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      //foreach of this State's outgoing arcs
+      for(k = 0; k < lattice[i].alphas[j].arcs.size(); k++){
+        //multiply each arc by the probability of the dest state (in -log2-space, this is addition instead of multiplication)
+        lattice[i].alphas[j].arcs[k].pArc += lattice[i].alphas[j].arcs[k].dest->pState;
+      }
+    }
+  }
+}
+
+
+/*
+  These are all dumb-Viterbi algorithms.
+
+  TODO change the func name
+  This is a mathematically dense function. We're looking for the alpha (letter) of the state with the highest conditional
+  probability, given the previous state.
+  
+
+char Viterbi::GetNextMaxAlphaCluster(const Cluster& cluster, )
+{
+
+    //iterate the states
+    maxArc = 0.0;
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+    
+      //iterate the arcs in each state
+      for(k = 0; k < lattice[i].alphas[i])
+    
+    
+    }
+}
+
+
+//returns the maximum likelihood alpha in a cluster
+char Viterbi::GetMaxAlphaFromCluster(const Cluster& cluster)
+{
+  char c;
+  double max = 0.0;
+
+  for(int i = 0; i < cluster.alphas.size(); i++){
+    if(max < cluster.alphas[i].pState){
+      max = cluster.alphas[i].pState;
+      c = cluster.alphas[i].symbol;
+    }
+  }
+
+  return c;
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

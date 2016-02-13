@@ -1,0 +1,52 @@
+
+//Every key has a char id, a location (Point), and a list of its neighbors (as a string)
+public class Key  {
+    char m_id;
+    Point m_center;
+    String m_neighbors; //raw neighbors are just stored as a string
+ 
+    public Key(){
+      m_id = '\0';
+      m_neighbors = "";
+      m_center = new Point(0,0);
+    }
+    public Key(char c, String neighborStr){
+      m_id = c;
+      m_neighbors = neighborStr;
+      m_center = new Point(0,0);
+    }
+    public String GetNeighbors(){
+      return m_neighbors;
+    }
+    public char GetId(){
+      return m_id;
+    }
+    public Point GetPoint(){
+      return m_center;
+    }
+    public void SetNeighbors(String neighbors){
+      m_neighbors = neighbors;
+    }
+    public void SetPoint(Point p){
+      m_center.SetXY(p.GetX(), p.GetY());
+    }
+    public void SetPoint(int x, int y){
+      m_center.SetXY(x,y);
+    }
+
+  
+  public static void main(String[] args){
+    Key key = new Key('B',"ABCDEGH");
+    Point pt = new Point();
+    if(pt == null){
+      System.out.println("null exception!");
+    }else{
+      pt.SetXY(22,33);
+      //key.SetPoint(pt);
+      key.SetPoint(22,33);
+      System.out.println("Key coordinates: "+Integer.toString(key.GetPoint().GetX())+","+Integer.toString(key.GetPoint().GetY()));
+    }
+  }
+  
+
+}

@@ -1,0 +1,167 @@
+#include "LanguageModel.hpp"
+
+LanguageModel::LanguageModel()
+{
+  //build the n-gram models. multiple classes use these, so they need to be placed in some higher class.
+  string s = "../unigrams.txt";
+  BuildCharacterNgramModel(s);
+  s = "../bigrams.txt";
+  BuildCharacterNgramModel(s);
+  s = "../trigrams.txt";
+  BuildCharacterNgramModel(s);
+  //s = "../quadgrams.txt";
+  //BuildCharacterNgramModel(s);
+
+
+  /*
+    TODO: build n-gram models from COCA or other n-gram source data
+  */
+}
+
+LanguageModel::~LanguageModel()
+{
+  unigramModel.clear();
+  bigramModel.clear();
+  trigramModel.clear();
+}
+
+/*
+  Re-condition the outputs using character n-gram data, where each n-gram model is assigned some optimized weight.
+
+  TODO: determine optimal n-gram lambdas.
+*/
+void LanguageModel::ReconditionByCharGrams(LatticePaths& edits)
+{
+  int i;
+
+  for(LatticePathsIt it = edits.begin(); it != edits.end(); ++it){
+    //unigram conditioning
+    for(i = 0; i < it->first.size(); i++){
+      it->second += (UNIGRAM_LAMBDA * GetUnigramProbability(it->first[i]));
+    }
+    //bigram conditioning
+    for(i = 0; i < it->first.size() - 1; i++){
+      it->second += (BIGRAM_LAMBDA * GetBigramProbability(it->first[i],it->first[i+1]));
+    }
+    //trigram conditioning
+    for(i = 0; i < it->first.size() - 2; i++){
+      it->second += (TRIGRAM_LAMBDA * GetTrigramProbability(it->first[i],it->first[i+1],it->first[i+2]));
+    }
+  }
+
+}
+
+void LanguageModel::Process(LatticePaths& edits)
+{
+  ReconditionByCharGrams(edits);
+
+  //TODO
+  //SearchForEdits(edits, 2); //edit distance processing. second parameter is max edit-distances to search for.
+  //ReconditionByWordGrams(list<string> usersPreviousInputs, edits);  
+
+  edits.sort(ByLogProb);
+}
+
+
+
+/*
+  Builds with -log2-space probabilities, as will all other functions.
+
+  Expect input file has already been converted to -log2-space values.
+
+  Note this doesn't need an n-gram parameter; the function instead determines this by the length
+  of the grams in the file, so you can pass it any filename and it will build the appropriate model.
+  
+  Its important to understand the key format. Since its U32, it could theoretically only support up to a
+  four-gram model, which isn't necessary. Also its building U32 keys from signed char values, which could
+  become problematic if not handled right.
+
+  When using conditining data, defined this application specifically: applying trigram data (or any n-gram data for n > 2)
+  breaks the dynamic programming model of the lattice. See Jurafsky SLP Ch 10.
+
+*/
+void LanguageModel::BuildCharacterNgramModel(const string& ngramFile)
+{
+  int ntoks, n;
+  U32 key;
+  char buf[BUFSIZE];
+  char* tokens[8] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+  //TODO: hardcode the bigram file path for now
+  fstream infile(ngramFile.c_str(), ios::in);
+  string delims = "\t";
+
+  if(!infile){
+    cout << "ERROR could not open file: " << ngramFile << endl;
+    return;
+  }
+
+  while(infile.getline(buf,BUFSIZE)){  // same as: while (getline( myfile, line ).good())
+    ntoks = tokenize(tokens,buf,delims);
+    if(ntoks == 2){
+
+      //map the ngram model by the length of the tokens
+      n = strnlen(tokens[0],16);
+      switch(n){
+
+        //build unigram model: first letter as U32 forms the key
+        case 1: 
+            key = (U32)tokens[0][0];
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            unigramModel[key] = atof(tokens[1]);        
+          break;
+ 
+        //build bigram model: first two letters OR'ed together into a U32 key form the key
+        case 2:
+            key = ((U32)tokens[0][1] << 8) | (U32)tokens[0][0];
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            bigramModel[key] = atof(tokens[1]);
+          break;
+
+        //build trigram model: first three letters OR'ed together into a U32 key form the key
+        case 3: 
+            key = ((U32)tokens[0][2] << 16) | ((U32)tokens[0][1] << 8) | (U32)tokens[0][0];
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            trigramModel[key] = atof(tokens[1]);
+          break;
+
+        //build trigram model: first three letters OR'ed together into a U32 key form the key
+        case 4: 
+            key = ((U32)tokens[0][2] << 16) | ((U32)tokens[0][1] << 8) | (U32)tokens[0][0];
+            key |= ((U32)tokens[0][3] << 16);
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            quadgramModel[key] = atof(tokens[1]);
+          break;
+
+        //error catchall
+        default:
+            cout << "WARNING incorrect strlen in tokens found in n-gram file. Sample gram: " << tokens[0] << " value=" << tokens[1] << endl;
+          break;
+      }
+    }
+    else{
+      cout << "WARNING incorrect number of tokens found in n-gram file: " << ngramFile << endl;
+    }
+  }
+
+  infile.close();
+}
+//  Lookup a bigram probability: probability of b, given a.
+//  Assume caller is responsible for validating bigram model (exists/not-empty, all possible a and b in model, etc).
+double LanguageModel::GetBigramProbability(char a, char b)
+{
+  return bigramModel[((U32)a << 8) | (U32)b];  //returns zero if these elements are new to the model, which they never should be
+}
+//return probability of a
+double LanguageModel::GetUnigramProbability(char a)
+{
+  return unigramModel[ (U32)a ];  //returns zero if these elements are new to the model, which they never should be
+}
+//Returns probability of c, given sequence ab.
+double LanguageModel::GetTrigramProbability(char a, char b, char c)
+{
+  return trigramModel[ ((U32)a << 16) | ((U32)b << 8) | (U32)c ];
+}
+
+
+
+

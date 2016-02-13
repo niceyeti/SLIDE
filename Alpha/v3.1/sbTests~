@@ -1,0 +1,1 @@
+all: ; g++ -o testSB testSB.cc SingularityBuilder.cpp LatticeBuilder.cpp -lrt -std=c++0x

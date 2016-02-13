@@ -1,0 +1,25 @@
+ifile = open("./junk.txt","r")
+lines = ifile.readlines()
+ofile = open("./junk2.txt","w+")
+
+olines = []
+for line in lines:
+  if "//" not in line:
+    prefix = line.split(",")[0]
+    newstr = line.split("\"")[1]
+    char = line.split("'")[1]
+    ostr = prefix+", new Key('"+char+"', new String(\""+newstr+"\")));"
+    print "outputting: ",ostr
+  else:
+    olines.append(line)
+
+
+ifile.close()
+ofile.close()
+
+
+
+
+
+
+

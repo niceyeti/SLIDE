@@ -1,0 +1,10 @@
+#!/usr/bin/python
+from Xlib import display
+
+c = display.Display().screen().root.query_pointer()._data
+x = c["root_x"]
+y = c["root_y"]
+
+while True:
+  c = display.Display().screen().root.query_pointer()._data
+  print c["root_x"], c["root_y"]

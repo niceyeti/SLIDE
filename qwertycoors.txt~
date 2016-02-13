@@ -1,0 +1,7 @@
+Qwerty coordinates
+
+       private  int [] x_coordinate = {230,325,420,520,620,715,810,910,1005,1100};
+                                                 //first  second  third  row
+       private int [] y_coordinate = {375  , 420    , 470        };   
+
+

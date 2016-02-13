@@ -1,0 +1,98 @@
+#include "Header.hpp"
+
+#ifndef SINGULARITYBUILDER_HPP
+#define SINGULARITYBUILDER_HPP
+
+
+/*
+  Signal builder receives streaming mouse data as input. Either the entire input,
+  or through a multithreaded queue.
+
+  Thus its input is a raw signal, its output (also queued, instead of all at once)
+  is a set of clusters.
+
+  The most basic state model is: signalBuilder receive input until an event triggers,
+  it processes the event, determines a cluster, and then queues up the cluster.
+
+  Clients of SignalBuilder may then expect a streaming set of point clusters (means)
+  indicating the region where an input was most likely received.
+
+  Cluster/event-identification method:
+
+  Takes in raw signal, and outputs estimates of likely input points, as clusters (PointMu's). Each cluster
+  becomes a column in the lattice.
+
+  Client of SensorOutput, some Mouse class that just continually queues up mouse coordinates.
+  Clients of SingularityBuilder wants a set of likely input points so it can map those points to a word.
+  This class is non-stochastic: the output points have no associated probabilities yet, they are the best
+  estimation of the actual points. Its clients will apply the conditioning probabilities. Mu.ticks passes along
+  one parameter for clients of this class to use, to determine some probability characteristics. But the overall
+  goal is for this class to do its best to cluster events, such that no futher such micro event processing is needed.
+  Think of the output of this class as determining the meta-transition model: the transitions between directed columns
+  in the lattice (or reflexive arcs back to a column).
+
+  Important test cases: "TOP" "POL" and similar ones. The critical ones are for selecting adjacent keys; this
+  needs to be supported for any n-keys.
+
+
+  Data structures: list probably seems preferable over vector for ops like sorting, or queueing. However,
+  this isn't the case for trivial data types of 8 bytes or less, and vector is nearly always at an
+  advantage due to contiguous memory allocation. The data structures here are very small (typically
+  a matrix of 5 x 20 chars representing a word), not millions of items, so it likely doesn't make much
+  difference which is used. But in that context, vector is the more optimized option. Ops like push_front
+  can be made efficient by implementing a vector-based ring which behaves as the abstraction of a queue.
+  
+  TODO:
+  -write in the stuff about signal strength. This class should determine a cluster mean, with which
+  it should also return the estimated amount of time we were in that state, as an output parameter for clients
+  to determine the likelihood that a reflexive arc (some repeated letter) occurred there.
+
+  -timers risk overflow. remember if someone stares at a point while timers run, there is the risk of overflowing time-based vars.
+
+
+  Enqueues likely clusters, but does NOT enqueue events detected in the <start/stop> region. Obviously we don't want to
+  throw an even just because the user wants to hit space, so that is omitted by this class.
+
+*/
+class SingularityBuilder
+{
+  public:
+    //streaming clustering. still reliant on a tick input, but should be near realtime
+    int dxThreshold;        //higher threshold means more precision, higher density clusters, but with fewer members, lower likelihood of "elbow" effect
+    int innerDxThreshold;   // a softer theshold once we're in the event state
+    int triggerThreshold;      //receive this many trigger before throwing. may also need to correlate these as consecutive triggers
+    int trigger;
+
+    //UI boundary parameters. The important thing is that we recognize when user is targeting the stop/start state region (space bar).
+    int activeRegion_Left;
+    int activeRegion_Right;
+    int activeRegion_Top;
+    int activeRegion_Bottom;
+
+    SingularityBuilder();
+    SingularityBuilder(int left, int right, int top, int bottom);
+    ~SingularityBuilder();
+
+    //testing
+    void UnitTests(void);
+    void TestSingularityBuilder(const string& testFile, string& fileDelimiter);
+    void BuildTestData(const string& fname, vector<Point>& inData, string& fileDelimiter);
+
+    bool IsWithinActiveRegion(const Point& p);
+    void PrintOutData(vector<PointMu>& outData);
+    void Process(vector<Point>& inData, vector<PointMu>& outData);
+    void CalculateMean(int begin, int end, const vector<Point>& coorList, PointMu& point);
+    double CalculateDeltaTheta(double theta1, double theta2, int dt);  //returns angular velocity as a secondary event trigger
+};
+
+
+#endif
+
+
+
+
+
+
+
+
+

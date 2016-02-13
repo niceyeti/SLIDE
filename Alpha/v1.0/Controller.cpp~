@@ -1,0 +1,299 @@
+#include "Header.hpp"
+
+//TODO: remove these to higher class, but that they may be used by multiple subclasses.
+//It seems to make more sense to condition the generated sequences after they have been, well, generated.
+KeyMap CLASS_keyMap;
+
+//TODO some other class needs to claim this function
+void PrintLattice(const Lattice& lattice)
+{
+  int i, j, k, maxht;
+  bool hit;
+
+  maxht = 0;
+  for(i = 0; i < lattice.size(); i++){
+    if(maxht < lattice[i].alphas.size()){
+      maxht = lattice[i].alphas.size();
+    }
+  }
+
+  //prints the vertices in columnar format
+  printf("Lattice vertices:\n");
+  i = 0; hit = false;
+  while(i < maxht){
+    for(j = 0; j < lattice.size(); j++){
+      if(lattice[j].alphas.size() > i){
+        printf("%c %3.1f   ", lattice[j].alphas[i].symbol, lattice[j].alphas[i].pState);
+      }
+      else{
+        printf("        ");
+      }
+    }
+    printf("\n");
+    i++;
+  }
+
+  //print the edges
+  for(i = 0; i < lattice.size() - 1; i++){
+    
+    printf("Column %d\n",i);
+    for(j = 0; j < lattice[i].alphas.size(); j++){
+      printf("  State %c: ",lattice[i].alphas[j].symbol);
+      for(k = 0; k < lattice[i].alphas[j].arcs.size(); k++){
+        if(lattice[i].alphas[j].arcs[k].dest != NULL){
+          printf("(%c,%2.1f) ",lattice[i].alphas[j].arcs[k].dest->symbol,lattice[i].alphas[j].arcs[k].pArc);
+        }
+        else{
+          printf("(NULL) ");
+        }
+      }
+      printf("\n");
+    }
+  }
+}
+
+/*
+  Iterate over the map looking for key nearest to some point p.
+  
+  TODO: This could be a lot faster than linear search. It will be called for every mean from
+  the SingularityBuilder, so eliminating it might speed things a bit.
+*/
+char FindNearestKey(const Point& p)
+{
+  char c = '\0';
+  double min = 99999;
+
+  //rather inefficiently searches over the entire keyboard... this could be improved with another lookup datastructure
+  for(KeyMapIt it = CLASS_keyMap.begin(); it != CLASS_keyMap.end(); ++it){
+    if(min > DoubleDistance(it->second.first, p)){
+      c = it->first;
+    }
+  }
+
+  return c;
+}
+
+vector<char>* GetNeighborPtr(char index)
+{
+  return &CLASS_keyMap[index].second;
+}
+Point GetPoint(char symbol)
+{
+  return CLASS_keyMap[symbol].first;
+}
+
+
+//returns decimal n-seconds to high-precision
+long double diffTimeSpecs(struct timespec* begin, struct timespec* end)
+{
+  long double scalar = 1000000000.0;
+  long double finish = (long double)(end->tv_sec - begin->tv_sec) + (long double)end->tv_nsec / scalar;
+  long double start = (long double)begin->tv_nsec / scalar;
+
+  //long finish = ((long double)end->tv_sec + (long double)end->tv_nsec / scalar);
+  //long start = ((long double)begin->tv_sec + (long double)begin->tv_nsec / scalar);
+  //cout << "end_sec " << end->tv_sec << "  end_nsec " << end->tv_nsec << "  start_sec " << begin->tv_sec << "  start_nsec " << begin->tv_nsec << endl;
+  //cout << "finish=" << finish << " start=" << start << endl;
+
+  return finish - start;
+}
+
+
+//TODO: remove the n-gram models and functions to a higher class.
+/*
+  Builds with -log2-space probabilities, as will all other functions.
+
+  Expect input file has already been converted to -log2-space values.
+
+  Note this doesn't need an n-gram parameter; the function instead determines this by the length
+  of the grams in the file, so you can pass it any filename and it will build the appropriate model.
+  
+  Its important to understand the key format. Since its U32, it could theoretically only support up to a
+  four-gram model, which isn't necessary. Also its building U32 keys from signed char values, which could
+  become problematic if not handled right.
+
+  When using conditining data, defined this application specifically: applying trigram data (or any n-gram data for n > 2)
+  breaks the dynamic programming model of the lattice. See Jurafsky SLP Ch 10.
+
+*/
+void BuildCharacterNgramModel(const string& ngramFile)
+{
+  int ntoks, n;
+  U32 key;
+  char buf[BUFSIZE];
+  char* tokens[8] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+  //TODO: hardcode the bigram file path for now
+  fstream infile(ngramFile.c_str(), ios::in);
+  string delims = "\t";
+
+  if(!infile){
+    cout << "ERROR could not open file: " << ngramFile << endl;
+    return;
+  }
+
+  while(infile.getline(buf,BUFSIZE)){  // same as: while (getline( myfile, line ).good())
+    ntoks = tokenize(tokens,buf,delims);
+    if(ntoks == 2){
+
+      //map the ngram model by the length of the tokens
+      n = strnlen(tokens[0],16);
+      switch(n){
+
+        //build unigram model: first letter as U32 forms the key
+        case 1: 
+            key = (U32)tokens[0][0];
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            unigramModel[key] = atof(tokens[1]);        
+          break;
+ 
+        //build bigram model: first two letters OR'ed together into a U32 key form the key
+        case 2:
+            key = ((U32)tokens[0][1] << 8) | (U32)tokens[0][0];
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            bigramModel[key] = atof(tokens[1]);
+          break;
+
+        //build trigram model: first three letters OR'ed together into a U32 key form the key
+        case 3: 
+            key = ((U32)tokens[0][1] << 8) | (U32)buf[1];
+            key |= ((U32)tokens[0][2] << 16);
+            //cout << "entering tokens[0] >" << tokens[0] << "< with log-probability=" << tokens[1] << "  (verify correctness)" << endl;
+            trigramModel[key] = atof(tokens[1]);
+          break;
+
+        //error catchall
+        default:
+            cout << "WARNING incorrect strlen in tokens found in n-gram file. Sample gram: " << tokens[0] << " value=" << tokens[1] << endl;
+          break;
+      }
+    }
+    else{
+      cout << "WARNING incorrect number of tokens found in n-gram file: " << ngramFile << endl;
+    }
+  }
+
+  infile.close();
+}
+//  Lookup a bigram probability: probability of b, given a.
+//  Assume caller is responsible for validating bigram model (exists/not-empty, all possible a and b in model, etc).
+double GetBigramProbability(char a, char b)
+{
+  return bigramModel[((U32)a << 8) | (U32)b];  //returns zero if these elements are new to the model, which they never should be
+}
+//return probability of a
+double GetUnigramProbability(char a)
+{
+  return unigramModel[ (U32)a ];  //returns zero if these elements are new to the model, which they never should be
+}
+//Returns probability of c, given sequence ab.
+double GetTrigramProbability(char a, char b, char c)
+{
+  return trigramModel[ ((U32)a << 16) | ((U32)b << 8) | (U32)c ];
+}
+
+
+
+//for integer pixel distances
+short int IntDistance(const point& p1, const point& p2)
+{
+  return (short int)sqrt(pow((double)(p1.X - p2.Y),2.0) + (short int)pow((double)(p1.Y + p2.Y),2.0));
+}
+
+//for real-valued distances, e.g. when mapping distances to a probability in range 0-1
+double DoubleDistance(const point& p1, const point& p2)
+{
+  return sqrt(pow((double)(p1.X - p2.Y),2.0) + pow((double)(p1.Y + p2.Y),2.0));
+}
+
+bool ByLogProb(const LatticePath& left, const LatticePath& right)
+{
+  return left.second < right.second;
+}
+
+
+//Comparison function for sorting arc's by probability, in ascending order, min item first. We're in -log2-space, so minimization is desired.
+bool maxArcLlikelihood(const Arc& left, const Arc& right)
+{
+  return left.pArc < right.pArc;
+}
+
+bool isDelimiter(const char c, const string& delims)
+{
+  int i;
+
+  for(i = 0; i < delims.length(); i++){
+    if(c == delims[i]){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/*
+  Logically the same as strtok: replace all 'delim' chars with null, storing beginning pointers in ptrs[]
+  Input string can have delimiters at any point or multiplicity
+
+  Pre-condition: This function continues tokenizing until it encounters '\0'. So buf must be null terminated,
+  so be sure to bound each phrase with null char.
+
+  Testing: This used to take a len parameter, but it was redundant with null checks and made the function 
+  too nasty to debug for various boundary cases, causing errors.
+*/
+int tokenize(char* ptrs[], char buf[BUFSIZE], const string& delims)
+{
+  int i, tokCt;
+  //int dummy;
+
+  if((buf == NULL) || (buf[0] == '\0')){
+    ptrs[0] = NULL;
+    cout << "WARN buf==NULL in tokenize(). delims: " << delims << endl;
+    return 0;
+  }
+  if(delims.length() == 0){
+    ptrs[0] = NULL;
+    cout << "WARN delim.length()==0 in tokenize()." << endl;
+    return 0;
+  }
+
+  //consume any starting delimiters then set the first token ptr
+  for(i = 0; isDelimiter(buf[i], delims) && (buf[i] != '\0'); i++);
+  //cout << "1. i = " << i << endl;
+
+  if(buf[i] == '\0'){  //occurs if string is all delimiters
+    if(DBG)
+      cout << "buf included only delimiters in tokenize(): i=" << i << "< buf: >" << buf << "< delims: >" << delims << "<" << endl;
+    ptrs[0] = NULL;
+    return 0;
+  }
+
+  //assign first token
+  ptrs[0] = &buf[i];
+  tokCt = 1;
+  while(buf[i] != '\0'){
+
+    //cout << "tok[" << tokCt-1 << "]: " << ptrs[tokCt-1] << endl;
+    //cin >> dummy;
+    //advance to next delimiter
+    for( ; !isDelimiter(buf[i], delims) && (buf[i] != '\0'); i++);
+    //end loop: buf[i] == delim OR buf[i]=='\0'
+
+    //consume extra delimiters
+    for( ; isDelimiter(buf[i], delims) && (buf[i] != '\0'); i++){
+      buf[i] = '\0';
+    } //end loop: buf[i] != delim OR buf[i]=='\0'
+
+    //at next substring
+    if(buf[i] != '\0'){
+      ptrs[tokCt] = &buf[i];
+      tokCt++;
+    }
+  } //end loop: buf[i]=='\0'
+
+  //cout << "DEBUG first/last tokens: " << ptrs[0] << "/" << ptrs[tokCt-1] << "<end>" <<  endl; 
+
+  ptrs[tokCt] = NULL;
+
+  return tokCt;
+}
+
