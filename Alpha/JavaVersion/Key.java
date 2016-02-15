@@ -1,37 +1,37 @@
 
 //Every key has a char id, a location (Point), and a list of its neighbors (as a string)
 public class Key  {
-    char m_id;
-    Point m_center;
-    String m_neighbors; //raw neighbors are just stored as a string
+    char _id;
+    Point _center;
+    String _neighbors; //raw neighbors are just stored as a string
  
     public Key(){
-      m_id = '\0';
-      m_neighbors = "";
-      m_center = new Point(0,0);
+      _id = '\0';
+      _neighbors = "";
+      _center = new Point(0,0);
     }
     public Key(char c, String neighborStr){
-      m_id = c;
-      m_neighbors = neighborStr;
-      m_center = new Point(0,0);
+      _id = c;
+      _neighbors = neighborStr;
+      _center = new Point(0,0);
     }
     public String GetNeighbors(){
-      return m_neighbors;
+      return _neighbors;
     }
     public char GetId(){
-      return m_id;
+      return _id;
     }
     public Point GetPoint(){
-      return m_center;
+      return _center;
     }
     public void SetNeighbors(String neighbors){
-      m_neighbors = neighbors;
+      _neighbors = neighbors;
     }
     public void SetPoint(Point p){
-      m_center.SetXY(p.GetX(), p.GetY());
+      _center.SetXY(p.GetX(), p.GetY());
     }
     public void SetPoint(int x, int y){
-      m_center.SetXY(x,y);
+      _center.SetXY(x,y);
     }
 
   

@@ -22,26 +22,23 @@ import java.util.ArrayList;
 */
 public class DirectInference
 {
-  KeyMap m_keyMapRef;
-  Set<String> m_wordSet;
+  KeyMap _keyMapRef;
+  Vocab _vocab;
 
   //DO NOT USE DEFAULT CTOR
   public DirectInference(){
-    m_wordSet = new HashSet<String>();
     String filePath = "../resources/vocabModel.txt";
+    _vocab = new Vocab(filePath);
     System.out.println("WARNING default DirectInference ctor called with no input word-file param. Only use the constructor with a file param.");
     System.out.println("Default ctor guessing file path is >"+filePath+"< which will fail if path is invalid...");
-    BuildWordSet(filePath);
   }
   //ONLY USE THIS CTOR
   public DirectInference(String vocabFileName, KeyMap kmap){
     if(kmap == null){
       System.out.println("ERROR null keyMap reference passed to DirectInference constructor, expect crash...");
     }
-    m_keyMapRef = kmap;
-    m_wordSet = new HashSet<String>();
-    System.out.println("Building word model from >"+vocabFileName+"< for DirectInference class ctor...");
-    BuildWordSet(vocabFileName);
+    _keyMapRef = kmap;
+    _vocab = new Vocab(vocabFileName);
   }
 
   /*  Expect word model as flat file word database, one (unique) word per line.
@@ -54,22 +51,22 @@ public class DirectInference
   private void BuildWordSet(String vocabFile)
   {
     try{
-      //m_wordSet = new Set<String>();
+      //_vocab = new Set<String>();
       BufferedReader br = new BufferedReader(new FileReader(vocabFile));
       String line;
 
-      if(m_wordSet.size() > 0){
-        m_wordSet.clear(); //clear the word model if it contains existing items
+      if(_vocab.size() > 0){
+        _vocab.clear(); //clear the word model if it contains existing items
       }
 
       while((line = br.readLine()) != null){
         // process the line
         String upper = line.toUpperCase();
-        m_wordSet.add(upper);
+        _vocab.add(upper);
       }
 
       br.close();
-      System.out.println("Building word model completed. wordSet.size()="+Integer.toString(m_wordSet.size()));
+      System.out.println("Building word model completed. wordSet.size()="+Integer.toString(_vocab.size()));
     }
     catch(java.io.FileNotFoundException ex){
       System.out.println("ERROR FileNotFoundException thrown for file: "+vocabFile);
@@ -88,7 +85,7 @@ public class DirectInference
     ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
     if(pointMeans.isEmpty()){
-      System.out.println("ERROR no data passed to DirectInference.Process(), returning zero results");
+      System.out.println("WARN no data passed to DirectInference.Process(), returning zero results");
       return results;
     }
 
@@ -131,7 +128,7 @@ public class DirectInference
     }
 
     //min = 99999;
-    for(String word : m_wordSet){
+    for(String word : _vocab){
     //for(String it = wordSet.begin(); it != wordSet.end(); ++it){
       dist = VectorDistance(pointMeans,word);
       //dist = VectorDistance(ArrayList<PointMu>,revArrayList<PointMu>,it);  //overload for fwd-bkwd versions
@@ -236,10 +233,10 @@ public class DirectInference
         //insertion error: essentially, this is a soft check whether *deleting* (skipping) the current letter yields realignment
         if((i+1) < pointMeans.size() && pointMeans.get(i+1).GetAlpha() == candidate.charAt(j)){
           if(j > 0){  //accumulate error, so this character difference receives at least some punishment
-            sumDist += InsertionError(pointMeans.get(i).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j-1)), m_keyMapRef.GetPoint(candidate.charAt(j)));
+            sumDist += InsertionError(pointMeans.get(i).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j-1)), _keyMapRef.GetPoint(candidate.charAt(j)));
           }
           else{ //the first is just an exception case, when we don't have two points to compare. so just compare char i to j
-            sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j)));
+            sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j)));
           }
           i++;  //skip the input error
           edts++;
@@ -251,12 +248,12 @@ public class DirectInference
           //when char i is detected, but i+1 is not, since its just too near to detect. Thus, the distance should be assessed wrt i,
           //instead of the midpoint (as for insertion error).
           if(i > 0 && pointMeans.size() > 1){
-            sumDist += Point.DoubleDistance(pointMeans.get(i-1).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j)));
-            //sumDist += InsertionError(m_keyMapRef.GetPoint(candidate.charAt(j)), pointMeans.get(i).GetPoint, pointMeans.get(i-1).GetPoint());
+            sumDist += Point.DoubleDistance(pointMeans.get(i-1).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j)));
+            //sumDist += InsertionError(_keyMapRef.GetPoint(candidate.charAt(j)), pointMeans.get(i).GetPoint, pointMeans.get(i-1).GetPoint());
           }
           //just an exception case, protecting the pointMeans bounds i and i-1
           else{
-            sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j)));
+            sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j)));
           }
           j++;
           edts++;
@@ -264,7 +261,7 @@ public class DirectInference
         //else, assume we're just off the mark, and let distance accumulate
         //note we hit this case either if the next letters also differ, or if the current (differing) letters includes the last letter of candidate
         else{
-          sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j)));
+          sumDist += Point.DoubleDistance(pointMeans.get(i).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j)));
         }
       }
 
@@ -280,12 +277,12 @@ public class DirectInference
     //The natural metric is to continue summing distance for remaining characters in either string.
     //Only one or neither of these loops will execute, since either (or both) i or j is at end of its sequence.
     while(i < pointMeans.size()){
-      sumDist +=  Point.DoubleDistance(pointMeans.get(i).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j-1)));
+      sumDist +=  Point.DoubleDistance(pointMeans.get(i).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j-1)));
       i++;
     }
     while(j < candidate.length()){
       //System.out.println("i="+Integer.toString(i)+" j="+Integer.toString(j)+" candidate: "+candidate);
-      sumDist +=  Point.DoubleDistance(pointMeans.get(i-1).GetPoint(), m_keyMapRef.GetPoint(candidate.charAt(j)));
+      sumDist +=  Point.DoubleDistance(pointMeans.get(i-1).GetPoint(), _keyMapRef.GetPoint(candidate.charAt(j)));
       while(j < (candidate.length()-1) && candidate.charAt(j) == candidate.charAt(j+1)){  //chew up repeated chars in candidate. We assume there aren't any in the input sequence, hence we don't do this in the previous loop
         j++;
         rpts++;
@@ -294,7 +291,7 @@ public class DirectInference
     }
 
     //finally, add some small punishment to repeats
-    sumDist += ((double)rpts * m_keyMapRef.GetMinInterKeyRadius() * 0.15); //token punishment to separate FOXX from FOX, DOGG from DOG
+    sumDist += ((double)rpts * _keyMapRef.GetMinInterKeyRadius() * 0.15); //token punishment to separate FOXX from FOX, DOGG from DOG
 
     return sumDist;
   }

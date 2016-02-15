@@ -1,25 +1,30 @@
 public class SearchResult implements Comparable<SearchResult>
 {
-  double m_score;
-  String m_word;  //note this will be used only as a reference to a string in the wordModel, not an actual String, per Java rules
+  double _score;
+  String _word;  //note this will be used only as a reference to a string in the wordModel, not an actual String, per Java rules
 
   public SearchResult(){
-    m_score = 0.0;
-    m_word = "";
+    _score = 0.0;
+    _word = "";
   }
   public SearchResult(double score, String word){
-    m_score = score;
-    m_word = word;
+    _score = score;
+    _word = word;
   }
   public String GetWord(){
-    return m_word;
+    return _word;
   }
   public double GetScore(){
-    return m_score;
+    return _score;
   }
+
+  public void Print(){
+    System.out.println(_word+":"+Double.toString(_score));
+  }
+
   @Override
   public String toString(){
-    return m_word+":"+Double.toString(m_score);
+    return _word+":"+Double.toString(_score);
   }
 
   @Override

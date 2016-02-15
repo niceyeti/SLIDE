@@ -23,10 +23,10 @@ import java.util.ArrayList;
 */
 public class SignalProcessor
 {
-  KeyMap m_keyMapRef;
-  int m_dxThreshold;
-  int m_innerDxThreshold;
-  int m_triggerThreshold;
+  KeyMap _keyMapRef;
+  int _dxThreshold;
+  int _innerDxThreshold;
+  int _triggerThreshold;
 
   public SignalProcessor(){
     System.out.println("ERROR SignalProcessor default constructor called, with no keyMap parameter. Use ctor with KeyMap parameter only.");
@@ -35,14 +35,14 @@ public class SignalProcessor
     if(kmap == null){
       System.out.println("ERROR null keyMap reference passed to SignalProcessor constructor, expect crash...");
     }
-    m_keyMapRef = kmap;
+    _keyMapRef = kmap;
     SetEventParameters(dxThresh,innerDxThresh,triggerThresh);
   }
 
   public void SetEventParameters(int dxThresh, int innerDxThresh, int triggerThresh){
-    m_dxThreshold = dxThresh;
-    m_innerDxThreshold = innerDxThresh;
-    m_triggerThreshold = triggerThresh;
+    _dxThreshold = dxThresh;
+    _innerDxThreshold = innerDxThresh;
+    _triggerThreshold = triggerThresh;
   }
 
   //Main method needs at least 4 data points to operate (though really more should be required, as a safety).
@@ -52,10 +52,10 @@ public class SignalProcessor
 
     i = validDataPoints = 0;
     while(i < inData.size()){
-      if(m_keyMapRef.InBounds(inData.get(i))){
+      if(_keyMapRef.InBounds(inData.get(i))){
         //System.out.println("In bounds: "+inData.get(i).toString());
         validDataPoints++;
-        if(validDataPoints >= (3 * m_triggerThreshold)){
+        if(validDataPoints >= (3 * _triggerThreshold)){
           return true;
         }
       }
@@ -103,7 +103,7 @@ public class SignalProcessor
     double dx;
 
     if(!SufficientData(inData)){
-      System.out.println("WARN insufficient valid data points for SignalProcessor.Process(). "+Double.toString(3*m_triggerThreshold)+" or more (valid) data points required.");
+      System.out.println("WARN insufficient valid data points for SignalProcessor.Process(). "+Double.toString(3*_triggerThreshold)+" or more (valid) data points required.");
       return outputMeans;
     }
 
@@ -111,7 +111,7 @@ public class SignalProcessor
     trigger = 0;
     for(i = 0; i < inData.size() - 4; i++){
       //ignore points outside of the active region, including the <start/stop> region
-      if(m_keyMapRef.InBounds(inData.get(i)) && m_keyMapRef.InBounds(inData.get(i+3))){
+      if(_keyMapRef.InBounds(inData.get(i)) && _keyMapRef.InBounds(inData.get(i+3))){
         dx = Point.DoubleDistance(inData.get(i),inData.get(i+3));
 
         /*
@@ -123,13 +123,13 @@ public class SignalProcessor
         */
 
         //TODO: advancing the index i below is done without InBounds() checks
-        if(dx < m_dxThreshold){  //determine velocity: distance of points three ticks apart
+        if(dx < _dxThreshold){  //determine velocity: distance of points three ticks apart
           trigger++;           //receive n-triggers before fully triggering, to buffer noise; like using a timer, but event-based
-          if(trigger >= m_triggerThreshold){  //trigger event and start collecting event data
+          if(trigger >= _triggerThreshold){  //trigger event and start collecting event data
             //System.out.println("       trigger");
             //capture the event
             eventStart = i;
-            while(i < (inData.size() - 4) && dx < m_innerDxThreshold){  //event state. remain in this state until dX (inter-reading) exceeds some threshold
+            while(i < (inData.size() - 4) && dx < _innerDxThreshold){  //event state. remain in this state until dX (inter-reading) exceeds some threshold
               dx = Point.DoubleDistance(inData.get(i),inData.get(i+3));
               i++;
             }
@@ -140,7 +140,7 @@ public class SignalProcessor
             //get the mean point w/in the event cluster and store it
             PointMu outPoint;
             outPoint = CalculateMean(eventStart,eventEnd,inData);
-            outPoint.SetAlpha(m_keyMapRef.FindNearestAlphaKey(outPoint.GetPoint()));
+            outPoint.SetAlpha(_keyMapRef.FindNearestAlphaKey(outPoint.GetPoint()));
             //System.out.println("Hit mean: "+outPoint.toString());
 
             //NOTE A new cluster is appended only if it is a unique letter; this prevents repeated chars.
@@ -195,7 +195,7 @@ public class SignalProcessor
     sumX = sumY = ct = 0;
     for(i = begin; (i < end) && (i < coorList.size()); i++){
       //System.out.println(coorList.get(i).toString());
-      if(m_keyMapRef.InBounds(coorList.get(i))){  //only accumulate valid points, not extrema outside the bounds of the key region of the ui
+      if(_keyMapRef.InBounds(coorList.get(i))){  //only accumulate valid points, not extrema outside the bounds of the key region of the ui
 	      sumX += coorList.get(i).GetX();
 	      sumY += coorList.get(i).GetY();
 	      ct++;
@@ -298,9 +298,9 @@ public class SignalProcessor
   public boolean MinSeparation(PointMu mu1, PointMu mu2)
   {
     if(mu1.GetAlpha() != mu2.GetAlpha()){  //TODO: this is redundant with a check in Process(). Oh well.
-      if(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint()) < (m_keyMapRef.GetMinInterKeyRadius() * 1.5)){
+      if(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint()) < (_keyMapRef.GetMinInterKeyRadius() * 1.5)){
         if(mu1.GetTicks() <= 4 || mu2.GetTicks() <= 4){  //time separation is INF for now
-          System.out.println("minkeyrad: "+Double.toString(m_keyMapRef.GetMinInterKeyRadius())+" dist: "+Double.toString(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint())));
+          System.out.println("minkeyrad: "+Double.toString(_keyMapRef.GetMinInterKeyRadius())+" dist: "+Double.toString(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint())));
           System.out.println("mindist failed, ticks are ("+mu1.GetAlpha()+","+Integer.toString(mu1.GetTicks())+")  ("+mu2.GetAlpha()+","+Integer.toString(mu2.GetTicks())+")");
           return false;
   	    }

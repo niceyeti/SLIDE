@@ -34,7 +34,7 @@ public class Key  {
       m_center.SetXY(x,y);
     }
 
-  /*
+  
   public static void main(String[] args){
     Key key = new Key('B',"ABCDEGH");
     Point pt = new Point();
@@ -47,6 +47,6 @@ public class Key  {
       System.out.println("Key coordinates: "+Integer.toString(key.GetPoint().GetX())+","+Integer.toString(key.GetPoint().GetY()));
     }
   }
-  */
+  
 
 }

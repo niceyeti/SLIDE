@@ -16,7 +16,7 @@ import java.util.Comparator;
   TODO: all the public/private qualifiers and class-file break down
   TODO: coding standards, make em purty. Change the capital case methods to camel case, like the java libs, if desired...
   TODO: check and evaluate enforcement of uppercase requirement; use uppercase char encodings throughout, but perhaps catch potential lowercase leaks at their root
-  TODO: keymap update stuff. m_keyMap is stateful, since the user may change the location and size of keys, so these will need to be update then
+  TODO: keymap update stuff. _keyMap is stateful, since the user may change the location and size of keys, so these will need to be update then
   TODO: check operator precedence usage compared with c++, especially in compound conditionals, etc
 
 */
@@ -24,9 +24,9 @@ import java.util.Comparator;
 
 public class FastMode{
 
-  KeyMap m_keyMap;
-  SignalProcessor m_signalProcessor;
-  DirectInference m_directInference;
+  KeyMap _keyMap;
+  SignalProcessor _signalProcessor;
+  DirectInference _directInference;
 
   //dont use the default constructor, as it hardcodes the keymap file path
   public FastMode()
@@ -34,20 +34,20 @@ public class FastMode{
     String keyFilePath = "./resources/ui/keyMap.txt";
     System.out.println("Default FastMode constructor called. Ctor taking keymap file path parameter is perferred.");
     System.out.println("Attempting to build keymap with hardcoded path: "+keyFilePath);
-    m_keyMap = new KeyMap(keyFilePath);
-    m_signalProcessor = new SignalProcessor(m_keyMap,14,16,4);
-    m_directInference = new DirectInference("./resources/languageModels/vocab.txt",m_keyMap);
+    _keyMap = new KeyMap(keyFilePath);
+    _signalProcessor = new SignalProcessor(_keyMap,14,16,4);
+    _directInference = new DirectInference("./resources/languageModels/vocab.txt",_keyMap);
   }
 
   public FastMode(String resourceDir)
   {
     if(Utilities.PathExists(resourceDir)){
       System.out.println("Building keymap");
-      m_keyMap = new KeyMap(resourceDir+"ui/keyMap.txt");
-      System.out.println("Building m_signalProcessor");
-      m_signalProcessor = new SignalProcessor(m_keyMap,14,16,4);
+      _keyMap = new KeyMap(resourceDir+"ui/keyMap.txt");
+      System.out.println("Building _signalProcessor");
+      _signalProcessor = new SignalProcessor(_keyMap,14,16,4);
       System.out.println("Building DirectInference");
-      m_directInference = new DirectInference(resourceDir+"languageModels/vocab.txt",m_keyMap);
+      _directInference = new DirectInference(resourceDir+"languageModels/vocab.txt",_keyMap);
     }
     else{
       System.out.println("ERROR resourceDir >"+resourceDir+"< not found! FastMode construction failed");
@@ -102,9 +102,9 @@ public class FastMode{
   public ArrayList<SearchResult> Process(ArrayList<Point> rawPoints)
   {
     //run sig processor
-    ArrayList<PointMu> means = m_signalProcessor.Process(rawPoints);
+    ArrayList<PointMu> means = _signalProcessor.Process(rawPoints);
     //run inference procedure over means
-    ArrayList<SearchResult> results = m_directInference.Process(means);
+    ArrayList<SearchResult> results = _directInference.Process(means);
 
     return results;
   }
@@ -147,15 +147,15 @@ public class FastMode{
   */
   public void SetEventParameters(int dxThresh, int innerDxThresh, int triggerThresh)
   {
-    m_signalProcessor.SetEventParameters(dxThresh,innerDxThresh,triggerThresh);
+    _signalProcessor.SetEventParameters(dxThresh,innerDxThresh,triggerThresh);
   }
 
   //TODO: updating the key map (such as if the user resizes the ui region) is untested
   public void UpdateKeyMap(String keyCoordinateFileName)
   {
-    if(m_keyMap != null){
-      System.out.println("Updating m_keyMap...");
-      m_keyMap.initKeyMap(keyCoordinateFileName);
+    if(_keyMap != null){
+      System.out.println("Updating _keyMap...");
+      _keyMap.initKeyMap(keyCoordinateFileName);
     }
   }
 

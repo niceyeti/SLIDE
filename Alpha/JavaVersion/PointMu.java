@@ -2,45 +2,45 @@
 // This may be either something discrete like a key press, or something stochastic, like "I think there was a click here" and my_ticks determines the likelihood of a click
 public class PointMu
 {
-  char m_alpha;
-  Point m_pt;
-  int m_ticks;
+  char _alpha;
+  Point _pt;
+  int _ticks;
 
   public PointMu(){
-    m_pt = new Point(0,0);
-    m_ticks = 0;
-    m_alpha = 'A';
+    _pt = new Point(0,0);
+    _ticks = 0;
+    _alpha = 'A';
   }
   public PointMu(Point point, int ticks){
-    m_pt = new Point(point.GetX(), point.GetY());
-    m_ticks = ticks;
-    m_alpha = 'A';
+    _pt = new Point(point.GetX(), point.GetY());
+    _ticks = ticks;
+    _alpha = 'A';
   }
   public PointMu(Point point, int ticks, char c){
-    m_pt = new Point(point.GetX(), point.GetY());
-    m_ticks = ticks;
-    m_alpha = c;
+    _pt = new Point(point.GetX(), point.GetY());
+    _ticks = ticks;
+    _alpha = c;
   }
   @Override
   public String toString(){
-    return m_pt.toString()+":"+m_alpha;
+    return _pt.toString()+":"+_alpha;
   }
   public void SetAlpha(char c){
-    m_alpha = c;
+    _alpha = c;
   }
   public void SetPoint(Point pt){
-    m_pt.SetXY(pt.GetX(),pt.GetY());
+    _pt.SetXY(pt.GetX(),pt.GetY());
   }
   public void SetTicks(int t){
-    m_ticks = t;
+    _ticks = t;
   }
   public char GetAlpha(){
-    return m_alpha;
+    return _alpha;
   }
   public int GetTicks(){
-    return m_ticks;
+    return _ticks;
   }
   public Point GetPoint(){
-    return m_pt;
+    return _pt;
   }
 } //end PointMu class

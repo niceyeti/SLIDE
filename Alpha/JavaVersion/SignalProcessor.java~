@@ -103,7 +103,7 @@ public class SignalProcessor
     double dx;
 
     if(!SufficientData(inData)){
-      System.out.println("WARN insufficient valid data points for SignalProcessor.Process(). "+Double.toString(3*m_triggerThreshold + 1)+" or more (valid) data points required.");
+      System.out.println("WARN insufficient valid data points for SignalProcessor.Process(). "+Double.toString(3*m_triggerThreshold)+" or more (valid) data points required.");
       return outputMeans;
     }
 

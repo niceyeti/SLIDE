@@ -35,6 +35,12 @@ public class Point
   public String toString(){
     return "("+Integer.toString(m_X)+","+Integer.toString(m_Y)+")";
   }
+
+  public static double DoubleDistance_Doom(Point p1, Point p2){
+    return 0.0;
+  }
+
+
   public static double DoubleDistance(Point p1, Point p2){
     return Math.sqrt(Math.pow((double)(p1.GetX() - p2.GetX()),2.0) + Math.pow((double)(p1.GetY() - p2.GetY()),2.0));
   }

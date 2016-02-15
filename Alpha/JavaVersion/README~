@@ -6,7 +6,9 @@ contains the necessary components for FastMode to work, as well as some test inp
 
 ~~~~Compilation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 To compile on the command line:
-  javac -g Utilities.java Point.java PointMu.java Key.java KeyMap.java SignalProcessor.java DirectInference.java FastMode.java SearchResult.java
+  javac -g Utilities.java Point.java PointMu.java Vocab.java Key.java KeyMap.java SignalProcessor.java DirectInference.java FastMode.java SearchResult.java
+Or use:
+  sh compileFastMode.sh
 
 
 ~~~~Running from cmd line~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

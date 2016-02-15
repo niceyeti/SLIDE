@@ -22,7 +22,7 @@ public class PointMu
     m_alpha = c;
   }
   @Override
-  public void toString(){
+  public String toString(){
     return m_pt.toString()+":"+m_alpha;
   }
   public void SetAlpha(char c){
