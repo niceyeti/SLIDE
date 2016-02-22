@@ -218,8 +218,10 @@ public class DpTwitch
     for(String word : vocab){
       ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
       dist = CompareSequences(testPoints,hiddenSequence);
-      SearchResult result = new SearchResult(dist,word);
-      results.add(result);
+      if(dist > 0){
+        SearchResult result = new SearchResult(dist,word);
+        results.add(result);
+      }
       /*
       i++;
       if(i > 30){
@@ -230,9 +232,15 @@ public class DpTwitch
     
     Collections.sort(results);
     
-    System.out.println("Results: ");
+    i = 0;
+    System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
     for(SearchResult result : results){
+      System.out.print(Integer.toString(i+1)+":  ");
       result.Print();
+      i++;
+      if(i > 20){
+        break;
+      }
       //System.out.print("\r\n");
     }
   }
