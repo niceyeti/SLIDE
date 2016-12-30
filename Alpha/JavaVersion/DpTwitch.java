@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Iterator;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
 import java.util.Comparator;
@@ -35,6 +34,9 @@ public class DpTwitch
     }
   }
 
+  //for use or just experimentation
+  SignalProcessor _signalProcessor;
+
   KeyMap _keyMap;
   MatrixCell[][] _matrix;  
   int MAX_ROWS;
@@ -50,6 +52,8 @@ public class DpTwitch
 
     //build the keymap
     _keyMap = new KeyMap(keyMapFile);
+    //build the signal processor; this may or may not be used
+   	_signalProcessor = new SignalProcessor(_keyMap,14,16,4);
     //build the matrix; no effort for space efficieny here...
     _matrix = new MatrixCell[MAX_ROWS][MAX_COLS];
     for(i = 0; i < MAX_ROWS; i++){
@@ -65,14 +69,37 @@ public class DpTwitch
     //TODO: this assumes row and col are positive, non-zero. Needs error check
     if(matrix[row][col-1].Score < matrix[row-1][col].Score){
       //left cell is greater, so take from it and point back to it
-      matrix[row][col].Score = matrix[row][col-1].Score + Point.DoubleDistance(datum,keyPoint);
+      matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * Point.DoubleDistance(datum,keyPoint);
+      //matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
       matrix[row][col].Backpointer = Direction.LEFT;
     }
     else{
       //upper cell is greater, so take from it instead and point up
-      matrix[row][col].Score = matrix[row-1][col].Score + Point.DoubleDistance(datum,keyPoint);
+      matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * Point.DoubleDistance(datum,keyPoint);
+      //matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
       matrix[row][col].Backpointer = Direction.UP;
     }
+  }
+  
+  private void _scoreCell_DpTwitch2(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix)
+  {
+	double dist = Point.CityBlockDistance(datum,keyPoint);
+	//double dist = Point.DoubleDistance(datum,keyPoint);
+
+	if(matrix[row-1][col-1].Score < matrix[row-1][col].Score && matrix[row-1][col-1].Score < matrix[row][col-1].Score){
+		matrix[row][col].Score = matrix[row-1][col-1].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.DIAG;
+	}
+	else if(matrix[row][col-1].Score < matrix[row-1][col].Score){
+		//left cell is greater, so take from it and point back to it
+		matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.LEFT;
+	}
+	else{
+		//upper cell is greater, so take from it instead and point up
+		matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.UP;
+	}
   }
 
   //Constructs test input data from some input file containing a raw stream (X,Y) coordinates, one coordinate per line.
@@ -130,7 +157,7 @@ public class DpTwitch
 
     System.out.println("TestWordStream testing "+Integer.toString(testPoints.size())+" raw data points");
 
-    score = CompareSequences(testPoints,wordPoints);
+    score = CompareSequences(testPoints,wordPoints,-1.0);
     
     System.out.println("Score: "+Double.toString(score));
   }
@@ -141,18 +168,22 @@ public class DpTwitch
   to be some sensor data, and the second sequence representing the sequence of letter coordinates
   of some word on some ui layout grid. So the input sequence is expected to be significantly 
   longer (unfiltered) than the "hidden" word letter-coordinate sequence.
+  
+  @threshold: If this holds a positive value, sequence comparison will bail and return INF-distance measure (just some
+  large distance score). This averts the needless computation of highly-distant words.
   */
-  public double CompareSequences(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence)
+  public double CompareSequences(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double threshold)
   {
     int i,j;
     int INF = 10000000;
+	double rowMin = 0;
 
     if(inputSequence.size() <= 1){
-      System.out.println("ERROR sequence1 too short for dpTwitch");
+      System.out.println("ERROR sequence1 too short for dpTwitch"+inputSequence.size());
       return -1;
     }
     if(wordSequence.size() <= 1){
-      System.out.println("ERROR sequence2 too short for dpTwitch");
+      System.out.println("ERROR sequence2 too short for dpTwitch: "+wordSequence.size());
       return -1;
     }
 
@@ -172,9 +203,16 @@ public class DpTwitch
 
     //run the forward algorithm
     for(i = 1; i < inputSequence.size(); i++){
+      rowMin = INF;
       for(j = 1; j < wordSequence.size(); j++){
         //the recurrence
-        _scoreCell_DpTwitch(i,j,inputSequence.get(i),wordSequence.get(j),_matrix);
+        _scoreCell_DpTwitch2(i,j,inputSequence.get(i),wordSequence.get(j),_matrix);
+        if(_matrix[i][j].Score < rowMin){
+        	rowMin = _matrix[i][j].Score;
+        }
+      }
+      if(threshold > 0 && rowMin > threshold){
+      	return INF;
       }
     }
 
@@ -211,23 +249,37 @@ public class DpTwitch
   {
     int i = 0;
     double dist;
+    double minDist = 9999999;
     Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
-    ArrayList<Point> testPoints = BuildTestData(inputFile);
+    ArrayList<Point> rawInput = BuildTestData(inputFile);
     ArrayList<SearchResult> results = new ArrayList<SearchResult>();
+
+	//experimental: optionally filter the input points, and check the effect on performance
+	ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
+	ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
+	//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,12);
+	System.out.println("num test points: "+testPoints.size());
 
     for(String word : vocab){
       ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
-      dist = CompareSequences(testPoints,hiddenSequence);
+      dist = CompareSequences(testPoints,hiddenSequence,-1.0);
       if(dist > 0){
         SearchResult result = new SearchResult(dist,word);
         results.add(result);
+        if(dist < minDist){
+        	minDist = dist;
+        }
       }
-      /*
+      
       i++;
+	  /*
       if(i > 30){
         break;
       }
       */
+      if(i % 1000 == 999){
+	    System.out.println(i);  
+      }
     }
     
     Collections.sort(results);
@@ -238,7 +290,7 @@ public class DpTwitch
       System.out.print(Integer.toString(i+1)+":  ");
       result.Print();
       i++;
-      if(i > 20){
+      if(i > 100){
         break;
       }
       //System.out.print("\r\n");

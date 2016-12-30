@@ -31,6 +31,7 @@ public class SignalProcessor
   public SignalProcessor(){
     System.out.println("ERROR SignalProcessor default constructor called, with no keyMap parameter. Use ctor with KeyMap parameter only.");
   }
+  
   public SignalProcessor(KeyMap kmap, int dxThresh, int innerDxThresh, int triggerThresh){
     if(kmap == null){
       System.out.println("ERROR null keyMap reference passed to SignalProcessor constructor, expect crash...");
@@ -45,12 +46,41 @@ public class SignalProcessor
     _triggerThreshold = triggerThresh;
   }
 
+  /*
+  Just for research: given a list (stream) of x/y points, returns a list of points that are
+  the sliding k-width window means of those points. @k is the frame width, such that for each
+  k points, the mean is taken as their protoype and appended to the output; then you slide
+  k points to the next frame of k-points, and repeat.
+  
+  This is a pre-filter function, closer to raw signal conditioning, but targeting application specific properties.
+  */
+  public ArrayList<Point> SlidingMeanFilter(ArrayList<Point> pointStream, int k){
+	double muX, muY;
+  	ArrayList<Point> output = new ArrayList<Point>();
+  	
+  	for(int i = 0; i < (pointStream.size() - k); i += k){
+		//get the mean point of this frame of points
+		muX = muY = 0.0;
+  		for(int j = 0; j < k; j++){
+  			muX += pointStream.get(i+j).GetX();
+  			muY += pointStream.get(i+j).GetY();
+  		}
+  		muX /= (double)k;
+  		muY /= (double)k;
+  		//Point mu((int)muX,(int)muY);
+  		output.add(new Point((int)muX,(int)muY));
+  	}
+  
+  	return output;
+  }
+
   //Main method needs at least 4 data points to operate (though really more should be required, as a safety).
   private boolean SufficientData(ArrayList<Point> inData)
   {
     int i, validDataPoints;
 
-    i = validDataPoints = 0;
+	i = 0;
+    validDataPoints = 0;
     while(i < inData.size()){
       if(_keyMapRef.InBounds(inData.get(i))){
         //System.out.println("In bounds: "+inData.get(i).toString());
@@ -252,7 +282,7 @@ public class SignalProcessor
     for(i = 1; i < intermediateData.size(); i++){
       // Only append output clusters which exceeds some inter-key distance
       // Note that this discrimination continues until sufficient inter-cluster distance is achieved.
-      if(MinSeparation(intermediateData.get(i-1),intermediateData.get(i))){
+      if(HasMinSeparation(intermediateData.get(i-1),intermediateData.get(i))){
         mergedData.add(intermediateData.get(i-1));
       }
       //else, forward-accumulate the reflexive likelihood to preserve repeat char info
@@ -295,7 +325,7 @@ public class SignalProcessor
     different enough (in terms of distance, char-id, or ticks) to say that they are separate
     input events, and not just over-detection. So this is a post-processing method.
   */
-  public boolean MinSeparation(PointMu mu1, PointMu mu2)
+  public boolean HasMinSeparation(PointMu mu1, PointMu mu2)
   {
     if(mu1.GetAlpha() != mu2.GetAlpha()){  //TODO: this is redundant with a check in Process(). Oh well.
       if(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint()) < (_keyMapRef.GetMinInterKeyRadius() * 1.5)){

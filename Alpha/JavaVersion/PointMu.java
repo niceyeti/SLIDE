@@ -1,3 +1,9 @@
+//import java.io.*;
+//import java.nio.*;
+import java.util.ArrayList;
+//import java.util.Collections;
+//import java.util.Iterator;
+
 // a PointMu (mu like mean) represents a trigger point or a cluster center for a sequence of x/y inputs.
 // This may be either something discrete like a key press, or something stochastic, like "I think there was a click here" and my_ticks determines the likelihood of a click
 public class PointMu
@@ -43,4 +49,16 @@ public class PointMu
   public Point GetPoint(){
     return _pt;
   }
+  
+  //simply converts a Point-mu list to a standard list of Points
+	public static ArrayList<Point> PointMuListToPointList(ArrayList<PointMu> pointMus){
+		ArrayList<Point> pointList = new ArrayList<Point>();
+		
+		for(PointMu pm : pointMus){
+			pointList.add(pm.GetPoint());
+		}
+		
+		return pointList;
+	}
+  
 } //end PointMu class

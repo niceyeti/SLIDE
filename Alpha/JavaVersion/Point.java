@@ -10,6 +10,10 @@ public class Point
   public Point(int x, int y){
     SetXY(x,y);
   }
+  
+	public Point(Point p){
+		InitPoint(p);
+	}
 
   public void InitPoint(Point p){
     m_X = p.GetX();
@@ -39,7 +43,10 @@ public class Point
   public static double DoubleDistance_Doom(Point p1, Point p2){
     return 0.0;
   }
-
+  
+  public static double CityBlockDistance(Point p1, Point p2){
+  	return Math.abs(p1.GetX() - p2.GetX()) + Math.abs(p1.GetY() - p2.GetY());
+  }
 
   public static double DoubleDistance(Point p1, Point p2){
     return Math.sqrt(Math.pow((double)(p1.GetX() - p2.GetX()),2.0) + Math.pow((double)(p1.GetY() - p2.GetY()),2.0));
