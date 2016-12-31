@@ -23,7 +23,7 @@ import java.util.ArrayList;
 */
 public class SignalProcessor
 {
-  KeyMap _keyMapRef;
+  KeyMap _keyMap;
   int _dxThreshold;
   int _innerDxThreshold;
   int _triggerThreshold;
@@ -36,7 +36,7 @@ public class SignalProcessor
     if(kmap == null){
       System.out.println("ERROR null keyMap reference passed to SignalProcessor constructor, expect crash...");
     }
-    _keyMapRef = kmap;
+    _keyMap = kmap;
     SetEventParameters(dxThresh,innerDxThresh,triggerThresh);
   }
 
@@ -73,7 +73,34 @@ public class SignalProcessor
   
   	return output;
   }
+  
+	/*
+	MergeMeans() is more advanced than this.
 
+	This experimental utility runs through a point sequence, omitting consecutive points within some minimal
+	separating distance of eachother. A straightforward redundancy filter; the assumption is that
+	@inData is the output of SlidingMeanFilter().
+	*/
+	public ArrayList<Point> RedundancyFilter(ArrayList<Point> inData)
+	{
+		ArrayList<Point> filteredData = new ArrayList<Point>();
+
+		filteredData.add(inData.get(0));
+		for(int i = 0; i < inData.size()-1; i++){
+			//shuttle to next point some minimum distance away
+			while(i < inData.size()-1 && Point.DoubleDistance(inData.get(i),inData.get(i+1)) < _keyMap.GetMinInterKeyRadius()){
+				i++;
+			}
+			if(i < inData.size()-1){
+				filteredData.add(inData.get(i+1));
+			}
+		}
+
+		System.out.println("RedundancyFilter() before filtering = "+inData.size()+" after filtering="+filteredData.size());
+
+		return filteredData;
+	}
+ 
   //Main method needs at least 4 data points to operate (though really more should be required, as a safety).
   private boolean SufficientData(ArrayList<Point> inData)
   {
@@ -82,7 +109,7 @@ public class SignalProcessor
 	i = 0;
     validDataPoints = 0;
     while(i < inData.size()){
-      if(_keyMapRef.InBounds(inData.get(i))){
+      if(_keyMap.InBounds(inData.get(i))){
         //System.out.println("In bounds: "+inData.get(i).toString());
         validDataPoints++;
         if(validDataPoints >= (3 * _triggerThreshold)){
@@ -141,7 +168,7 @@ public class SignalProcessor
     trigger = 0;
     for(i = 0; i < inData.size() - 4; i++){
       //ignore points outside of the active region, including the <start/stop> region
-      if(_keyMapRef.InBounds(inData.get(i)) && _keyMapRef.InBounds(inData.get(i+3))){
+      if(_keyMap.InBounds(inData.get(i)) && _keyMap.InBounds(inData.get(i+3))){
         dx = Point.DoubleDistance(inData.get(i),inData.get(i+3));
 
         /*
@@ -170,7 +197,7 @@ public class SignalProcessor
             //get the mean point w/in the event cluster and store it
             PointMu outPoint;
             outPoint = CalculateMean(eventStart,eventEnd,inData);
-            outPoint.SetAlpha(_keyMapRef.FindNearestAlphaKey(outPoint.GetPoint()));
+            outPoint.SetAlpha(_keyMap.FindNearestAlphaKey(outPoint.GetPoint()));
             //System.out.println("Hit mean: "+outPoint.toString());
 
             //NOTE A new cluster is appended only if it is a unique letter; this prevents repeated chars.
@@ -225,7 +252,7 @@ public class SignalProcessor
     sumX = sumY = ct = 0;
     for(i = begin; (i < end) && (i < coorList.size()); i++){
       //System.out.println(coorList.get(i).toString());
-      if(_keyMapRef.InBounds(coorList.get(i))){  //only accumulate valid points, not extrema outside the bounds of the key region of the ui
+      if(_keyMap.InBounds(coorList.get(i))){  //only accumulate valid points, not extrema outside the bounds of the key region of the ui
 	      sumX += coorList.get(i).GetX();
 	      sumY += coorList.get(i).GetY();
 	      ct++;
@@ -328,9 +355,9 @@ public class SignalProcessor
   public boolean HasMinSeparation(PointMu mu1, PointMu mu2)
   {
     if(mu1.GetAlpha() != mu2.GetAlpha()){  //TODO: this is redundant with a check in Process(). Oh well.
-      if(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint()) < (_keyMapRef.GetMinInterKeyRadius() * 1.5)){
+      if(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint()) < (_keyMap.GetMinInterKeyRadius() * 1.5)){
         if(mu1.GetTicks() <= 4 || mu2.GetTicks() <= 4){  //time separation is INF for now
-          System.out.println("minkeyrad: "+Double.toString(_keyMapRef.GetMinInterKeyRadius())+" dist: "+Double.toString(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint())));
+          System.out.println("minkeyrad: "+Double.toString(_keyMap.GetMinInterKeyRadius())+" dist: "+Double.toString(Point.DoubleDistance(mu1.GetPoint(),mu2.GetPoint())));
           System.out.println("mindist failed, ticks are ("+mu1.GetAlpha()+","+Integer.toString(mu1.GetTicks())+")  ("+mu2.GetAlpha()+","+Integer.toString(mu2.GetTicks())+")");
           return false;
   	    }

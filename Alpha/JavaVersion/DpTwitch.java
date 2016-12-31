@@ -192,6 +192,9 @@ public class DpTwitch
   of some word on some ui layout grid. So the input sequence is expected to be significantly 
   longer (unfiltered) than the "hidden" word letter-coordinate sequence.
   
+  Note that with some recurrences--and in fact the ones shown most successful--this function is 'barely' dynamic
+  programming, and could possibly be approximated with a stack of some kind.
+  
   @threshold: If this holds a positive value, sequence comparison will bail and return INF-distance measure (just some
   large distance score). This averts the needless computation of highly-distant words.
   */
@@ -333,15 +336,16 @@ public class DpTwitch
     ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
 	//experimental: optionally filter the input points, and check the effect on performance
-//ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
-//ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
-	//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,12);
+	//ArrayList<PointMu> pointMus = _signalProcessor.Process(testPoints);
+	//testPoints = PointMu.PointMuListToPointList(pointMus);
+	testPoints = _signalProcessor.SlidingMeanFilter(testPoints,2);
+	//testPoints = _signalProcessor.RedundancyFilter(testPoints);
 	System.out.println("num test points: "+testPoints.size());
 
     for(String word : vocab){
-      ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
-      dist = ComparePointSequences(testPoints,hiddenSequence,-1.0);
-      if(dist > 0){
+      ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
+      dist = ComparePointSequences(testPoints,hiddenSequence,-1);
+      if(dist >= 0){
         SearchResult result = new SearchResult(dist,word);
         results.add(result);
         if(dist < minDist){
