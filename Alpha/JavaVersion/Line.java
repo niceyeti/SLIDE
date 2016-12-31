@@ -43,6 +43,10 @@ public class Line
 		double y2 = p2.GetY();
 
 		_mag = Math.sqrt(Math.pow(y2-y1,2.0) + Math.pow(x2-x1, 2.0));
+		if(_mag == 0.0){
+			System.out.println("ERROR p1 == p2 in Line() ctor; expect div-zero/nan result");
+		}
+		
 		_a = (y2-y1) / _mag;
 		_b = (x2-x1) / _mag;
 		_c = (x2*y1 - y2*x1) / _mag;
@@ -57,19 +61,29 @@ public class Line
 	where each line segment is described by vector n and constant p. This is just convenient
 	notation for getting the distance from a point x to the line, which is given by: x dot n + p.
 	Storing the segments as n and p means these values are precomputed, speeding up dynamic programming.
+	
+	NOTE: consecutive, equal points are problematic (zero length lines) and are skipped until a unique point is found.
 	*/
 	public static ArrayList<Line> PointsToLineSequence(ArrayList<Point> points){
 		ArrayList<Line> lines = new ArrayList<Line>();
-
-		for(int i = 1; i < points.size(); i++){
-			Line line = new Line(points.get(i-1), points.get(i));
-			lines.add(line);
+		Point prev, cur;
+		
+		for(int i = 0; i < points.size()-1; i++){
+			prev = points.get(i);
+			//shuttle to next non-equal point
+			while(i < (points.size()-1) && prev.Equals(points.get(i+1))){
+				i++;
+			}
+			//post-loop: i points at non-equal next point, or is out of bounds
+			if(i < points.size()-1){ //add point pair, if in-bounds
+				Line line = new Line(prev, points.get(i+1));
+				lines.add(line);
+			}
 		}
 
 		return lines;
 	}
 	
 }
-
 
 

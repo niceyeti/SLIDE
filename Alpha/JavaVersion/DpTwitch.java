@@ -103,25 +103,25 @@ public class DpTwitch
 	}
   }
   
-  private void _scoreCell_DpTwitch3(int row, int col, Point datum, Line line, MatrixCell[][] matrix)
-  {
-	double dist = line.PointLineDistance(datum);
+	private void _scoreCell_DpTwitch3(int row, int col, Point datum, Line line, MatrixCell[][] matrix)
+	{
+		double dist = line.PointLineDistance(datum);
 
-	if(matrix[row-1][col-1].Score < matrix[row-1][col].Score && matrix[row-1][col-1].Score < matrix[row][col-1].Score){
-		matrix[row][col].Score = matrix[row-1][col-1].Score + 1.0 * dist;
-		matrix[row][col].Backpointer = Direction.DIAG;
+		if(matrix[row-1][col-1].Score < matrix[row-1][col].Score && matrix[row-1][col-1].Score < matrix[row][col-1].Score){
+			matrix[row][col].Score = matrix[row-1][col-1].Score + 1.0 * dist;
+			matrix[row][col].Backpointer = Direction.DIAG;
+		}
+		else if(matrix[row][col-1].Score < matrix[row-1][col].Score){
+			//left cell is greater, so take from it and point back to it
+			matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * dist;
+			matrix[row][col].Backpointer = Direction.LEFT;
+		}
+		else{
+			//upper cell is greater, so take from it instead and point up
+			matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * dist;
+			matrix[row][col].Backpointer = Direction.UP;
+		}
 	}
-	else if(matrix[row][col-1].Score < matrix[row-1][col].Score){
-		//left cell is greater, so take from it and point back to it
-		matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * dist;
-		matrix[row][col].Backpointer = Direction.LEFT;
-	}
-	else{
-		//upper cell is greater, so take from it instead and point up
-		matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * dist;
-		matrix[row][col].Backpointer = Direction.UP;
-	}
-  }
   
 
   //Constructs test input data from some input file containing a raw stream (X,Y) coordinates, one coordinate per line.
@@ -281,7 +281,7 @@ public class DpTwitch
 			rowMin = INF;
 			for(j = 1; j < lineSequence.size(); j++){
 				//the recurrence
-				_scoreCell_DpTwitch3(i,j,inputSequence.get(i),lineSequence.get(j),_matrix);
+				_scoreCell_DpTwitch3(i, j, inputSequence.get(i), lineSequence.get(j), _matrix);
 				if(_matrix[i][j].Score < rowMin){
 					rowMin = _matrix[i][j].Score;
 				}
@@ -393,23 +393,26 @@ public class DpTwitch
 		//experimental: optionally filter the input points, and check the effect on performance
 	//ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
 	//ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
-		testPoints = _signalProcessor.SlidingMeanFilter(testPoints,5);
+		//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,5);
 		System.out.println("num test points: "+testPoints.size());
 
 		for(String word : vocab){
-			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
+			//TODO: These could be pre-computed and stored, giving faster run times
+			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
 			ArrayList<Line> lineSequence = Line.PointsToLineSequence(hiddenSequence);
 
 			dist = CompareLinearSequences(testPoints,lineSequence,-1.0);
-			if(dist >= 0){
+			//an experiment: define dist as average dist, to help make it length invariant
+			dist = dist / (double)lineSequence.size();
+			//if(dist >= 0){
 				SearchResult result = new SearchResult(dist,word);
 				results.add(result);
 				if(dist < minDist){
 					minDist = dist;
 				}
-			}
-			
-			if(word == "MISSISSIPPI"){
+			//}
+				//System.out.println(">"+word+"<");
+			if(word.equals("MISSISSIPPI")){
 				System.out.println("missip: "+dist);
 			}
 

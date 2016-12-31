@@ -35,10 +35,14 @@ public class Point
   public void SetX(int X){
     m_X = X;
   }
-  @Override
-  public String toString(){
-    return "("+Integer.toString(m_X)+","+Integer.toString(m_Y)+")";
-  }
+	@Override
+	public String toString(){
+		return "("+Integer.toString(m_X)+","+Integer.toString(m_Y)+")";
+	}
+
+	public boolean Equals(Point other){
+		return other.GetX() == m_X && other.GetY() == m_Y;
+	}
 
   public static double DoubleDistance_Doom(Point p1, Point p2){
     return 0.0;
