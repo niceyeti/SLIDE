@@ -64,6 +64,7 @@ public class DpTwitch
   }
 
   //Implements the recurrence for each cell, minimizing cost
+  //This recurrence is somewhat invalid, doesn't propagate minimal scores properly.
   private void _scoreCell_DpTwitch(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix)
   {
     //TODO: this assumes row and col are positive, non-zero. Needs error check
@@ -101,6 +102,27 @@ public class DpTwitch
 		matrix[row][col].Backpointer = Direction.UP;
 	}
   }
+  
+  private void _scoreCell_DpTwitch3(int row, int col, Point datum, Line line, MatrixCell[][] matrix)
+  {
+	double dist = line.PointLineDistance(datum);
+
+	if(matrix[row-1][col-1].Score < matrix[row-1][col].Score && matrix[row-1][col-1].Score < matrix[row][col-1].Score){
+		matrix[row][col].Score = matrix[row-1][col-1].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.DIAG;
+	}
+	else if(matrix[row][col-1].Score < matrix[row-1][col].Score){
+		//left cell is greater, so take from it and point back to it
+		matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.LEFT;
+	}
+	else{
+		//upper cell is greater, so take from it instead and point up
+		matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * dist;
+		matrix[row][col].Backpointer = Direction.UP;
+	}
+  }
+  
 
   //Constructs test input data from some input file containing a raw stream (X,Y) coordinates, one coordinate per line.
   //This function checks some of the file formatting, but also strongly assumes it is valid.
@@ -146,7 +168,7 @@ public class DpTwitch
     return pointSequence;
   }
 
-  public void TestWord(String inputFile, String hiddenWord)
+  public void TestWordPointwise(String inputFile, String hiddenWord)
   {
     int i;
     double score;
@@ -155,9 +177,9 @@ public class DpTwitch
     ArrayList<Point> testPoints = BuildTestData(inputFile);
     ArrayList<Point> wordPoints = _keyMap.WordToPointSequence(hiddenWord);
 
-    System.out.println("TestWordStream testing "+Integer.toString(testPoints.size())+" raw data points");
+    System.out.println("TestWordPointwiseStream testing "+Integer.toString(testPoints.size())+" raw data points");
 
-    score = CompareSequences(testPoints,wordPoints,-1.0);
+    score = ComparePointSequences(testPoints,wordPoints,-1.0);
     
     System.out.println("Score: "+Double.toString(score));
   }
@@ -172,7 +194,7 @@ public class DpTwitch
   @threshold: If this holds a positive value, sequence comparison will bail and return INF-distance measure (just some
   large distance score). This averts the needless computation of highly-distant words.
   */
-  public double CompareSequences(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double threshold)
+  public double ComparePointSequences(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double threshold)
   {
     int i,j;
     int INF = 10000000;
@@ -221,6 +243,59 @@ public class DpTwitch
     //for optimal global alignment, the bottom-rightmost cell will have the optimal score for this alignment
     return _matrix[inputSequence.size()-1][wordSequence.size()-1].Score;
   }
+  
+	public double CompareLinearSequences(ArrayList<Point> inputSequence, ArrayList<Line> lineSequence, double threshold)
+	{
+		int i,j;
+		int INF = 10000000;
+		double rowMin = 0;
+
+		if(inputSequence.size() <= 1){
+			System.out.println("ERROR input sequence too short for dpTwitch"+inputSequence.size());
+			return -1;
+		}
+		if(lineSequence.size() <= 1){
+			System.out.println("ERROR line sequence too short for dpTwitch: "+lineSequence.size());
+			return -1;
+		}
+
+		//initialize the dp table, for distance minimization
+		_matrix[0][0].Backpointer = _direction.UP;
+		_matrix[0][0].Score = lineSequence.get(0).PointLineDistance(inputSequence.get(0));
+		//_matrix[0][0].Score = Point.DoubleDistance(inputSequence.get(0), lineSequence.get(0));
+		for(j = 1; j < lineSequence.size(); j++){
+			//init the first row
+			_matrix[0][j].Backpointer = Direction.LEFT;
+			_matrix[0][j].Score = lineSequence.get(j).PointLineDistance(inputSequence.get(0)) + _matrix[0][j-1].Score;
+			//_matrix[0][j].Score = Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + _matrix[0][j-1].Score;
+		}
+		for(i = 1; i < inputSequence.size(); i++){
+			//init the first column
+			_matrix[i][0].Backpointer = Direction.UP;
+			_matrix[i][0].Score = lineSequence.get(0).PointLineDistance(inputSequence.get(i)) + _matrix[i-1][0].Score;
+			//_matrix[i][0].Score = Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + _matrix[i-1][0].Score;
+		}
+
+		//run the forward algorithm
+		for(i = 1; i < inputSequence.size(); i++){
+			rowMin = INF;
+			for(j = 1; j < lineSequence.size(); j++){
+				//the recurrence
+				_scoreCell_DpTwitch3(i,j,inputSequence.get(i),lineSequence.get(j),_matrix);
+				if(_matrix[i][j].Score < rowMin){
+					rowMin = _matrix[i][j].Score;
+				}
+			}
+			if(threshold > 0 && rowMin > threshold){
+				return INF;
+			}
+		}
+
+		//_printMatrix(inputSequence.size(),wordSequence.size());
+
+		//for optimal global alignment, the bottom-rightmost cell will have the optimal score for this alignment
+		return _matrix[inputSequence.size()-1][lineSequence.size()-1].Score;
+	}
 
   private void _printMatrix(int numRows, int numCols)
   {
@@ -243,9 +318,10 @@ public class DpTwitch
 
   /*
   Given a file containing an input stream of sensor points, compares that sequence with
-  every word in the vocabulary. This is brute-force, inefficient.
+  every word in the vocabulary. This is brute-force, inefficient dynamic programming over
+  the point sequence given by some word, which is a poor approximation of trace-to-word distance.
   */
-  public void Test(String inputFile)
+  public void TestPointwiseDP(String inputFile)
   {
     int i = 0;
     double dist;
@@ -262,7 +338,7 @@ public class DpTwitch
 
     for(String word : vocab){
       ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
-      dist = CompareSequences(testPoints,hiddenSequence,-1.0);
+      dist = ComparePointSequences(testPoints,hiddenSequence,-1.0);
       if(dist > 0){
         SearchResult result = new SearchResult(dist,word);
         results.add(result);
@@ -296,20 +372,82 @@ public class DpTwitch
       //System.out.print("\r\n");
     }
   }
-
-  public static void main(String[] args)
+  
+  /*
+  Given a file containing an input stream of sensor points, compares that sequence with
+  every word in the vocabulary. This version runs the linear trace-to-word distance measure,
+  using some heuristics for reducing computational complexity of comparing linear distances.
+  The linear sequence dynamic programming model should provide about the best/most-precise signal-trace
+  distance metric possible.
+  */
+  public void TestLinearDP(String inputFile)
   {
-    String wordFile = "./resources/testing/performance/word12.txt";
-    String word = "MISSISSIPPI";
-    String keyMapFile = "./resources/ui/keyMap.txt";
-    DpTwitch twitch = new DpTwitch(keyMapFile);
+    int i = 0;
+    double dist;
+    double minDist = 9999999;
+    Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
+    ArrayList<Point> rawInput = BuildTestData(inputFile);
+    ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
-    twitch.TestWord(wordFile,word);
-    twitch.TestWord(wordFile,"BILOXI");
-    twitch.TestWord(wordFile,"ALABAMA");
-    twitch.TestWord(wordFile,"ABC");
+	//experimental: optionally filter the input points, and check the effect on performance
+	ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
+	ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
+	//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,12);
+	System.out.println("num test points: "+testPoints.size());
 
-    twitch.Test(wordFile);
-    
-  }
+	for(String word : vocab){
+		ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
+		ArrayList<Line> lineSequence = Line.PointsToLineSequence(hiddenSequence);
+
+		dist = CompareLinearSequences(testPoints,lineSequence,-1.0);
+		if(dist > 0){
+			SearchResult result = new SearchResult(dist,word);
+			results.add(result);
+			if(dist < minDist){
+				minDist = dist;
+			}
+		}
+
+		i++;
+		/*
+		if(i > 30){
+		break;
+		}
+		*/
+		if(i % 1000 == 999){
+			System.out.println(i);  
+		}
+	}
+
+	Collections.sort(results);
+
+	i = 0;
+	System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
+	for(SearchResult result : results){
+	System.out.print(Integer.toString(i+1)+":  ");
+	result.Print();
+	i++;
+	if(i > 100){
+	break;
+	}
+	//System.out.print("\r\n");
+	}
+	}
+  
+
+	public static void main(String[] args)
+	{
+		String wordFile = "./resources/testing/performance/word12.txt";
+		String word = "MISSISSIPPI";
+		String keyMapFile = "./resources/ui/keyMap.txt";
+		DpTwitch twitch = new DpTwitch(keyMapFile);
+
+		twitch.TestWordPointwise(wordFile,word);
+		twitch.TestWordPointwise(wordFile,"BILOXI");
+		twitch.TestWordPointwise(wordFile,"ALABAMA");
+		twitch.TestWordPointwise(wordFile,"ABC");
+
+		twitch.TestPointwiseDP(wordFile);
+		twitch.TestLinearDP(wordFile);
+	}
 }
