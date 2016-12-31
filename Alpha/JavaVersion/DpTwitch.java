@@ -108,16 +108,17 @@ public class DpTwitch
 		double dist = line.PointLineDistance(datum);
 
 		if(matrix[row-1][col-1].Score < matrix[row-1][col].Score && matrix[row-1][col-1].Score < matrix[row][col-1].Score){
+			//diagonal substitution
 			matrix[row][col].Score = matrix[row-1][col-1].Score + 1.0 * dist;
 			matrix[row][col].Backpointer = Direction.DIAG;
 		}
 		else if(matrix[row][col-1].Score < matrix[row-1][col].Score){
-			//left cell is greater, so take from it and point back to it
+			//insertion: left cell is greater, so take from it and point back to it
 			matrix[row][col].Score = matrix[row][col-1].Score + 1.0 * dist;
 			matrix[row][col].Backpointer = Direction.LEFT;
 		}
 		else{
-			//upper cell is greater, so take from it instead and point up
+			//deletion: upper cell is greater, so take from it instead and point up
 			matrix[row][col].Score = matrix[row-1][col].Score + 1.0 * dist;
 			matrix[row][col].Backpointer = Direction.UP;
 		}
@@ -228,7 +229,8 @@ public class DpTwitch
       rowMin = INF;
       for(j = 1; j < wordSequence.size(); j++){
         //the recurrence
-        _scoreCell_DpTwitch2(i,j,inputSequence.get(i),wordSequence.get(j),_matrix);
+		_scoreCell_DpTwitch(i,j,inputSequence.get(i),wordSequence.get(j),_matrix);
+        //_scoreCell_DpTwitch2(i,j,inputSequence.get(i),wordSequence.get(j),_matrix);
         if(_matrix[i][j].Score < rowMin){
         	rowMin = _matrix[i][j].Score;
         }
@@ -327,12 +329,12 @@ public class DpTwitch
     double dist;
     double minDist = 9999999;
     Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
-    ArrayList<Point> rawInput = BuildTestData(inputFile);
+    ArrayList<Point> testPoints = BuildTestData(inputFile);
     ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
 	//experimental: optionally filter the input points, and check the effect on performance
-	ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
-	ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
+//ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
+//ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
 	//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,12);
 	System.out.println("num test points: "+testPoints.size());
 
@@ -403,7 +405,7 @@ public class DpTwitch
 
 			dist = CompareLinearSequences(testPoints,lineSequence,-1.0);
 			//an experiment: define dist as average dist, to help make it length invariant
-			dist = dist / (double)lineSequence.size();
+			//dist = dist / (double)lineSequence.size();
 			//if(dist >= 0){
 				SearchResult result = new SearchResult(dist,word);
 				results.add(result);
@@ -458,7 +460,7 @@ public class DpTwitch
 		twitch.TestWordPointwise(wordFile,"ALABAMA");
 		twitch.TestWordPointwise(wordFile,"ABC");
 		*/
-		//twitch.TestPointwiseDP(wordFile);
-		twitch.TestLinearDP(wordFile);
+		twitch.TestPointwiseDP(wordFile);
+		//twitch.TestLinearDP(wordFile);
 	}
 }
