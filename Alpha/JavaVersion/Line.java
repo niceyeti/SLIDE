@@ -36,11 +36,11 @@ public class Line
 	double _c;
 	double _mag;
 
-	public Line(Point p0, Point p1){
-		double x1 = p0.GetX();
-		double y1 = p0.GetY();
-		double x2 = p1.GetX();
-		double y2 = p1.GetY();
+	public Line(Point p1, Point p2){
+		double x1 = p1.GetX();
+		double y1 = p1.GetY();
+		double x2 = p2.GetX();
+		double y2 = p2.GetY();
 
 		_mag = Math.sqrt(Math.pow(y2-y1,2.0) + Math.pow(x2-x1, 2.0));
 		_a = (y2-y1) / _mag;

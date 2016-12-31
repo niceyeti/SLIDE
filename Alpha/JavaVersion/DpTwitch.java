@@ -373,65 +373,72 @@ public class DpTwitch
     }
   }
   
-  /*
-  Given a file containing an input stream of sensor points, compares that sequence with
-  every word in the vocabulary. This version runs the linear trace-to-word distance measure,
-  using some heuristics for reducing computational complexity of comparing linear distances.
-  The linear sequence dynamic programming model should provide about the best/most-precise signal-trace
-  distance metric possible.
-  */
-  public void TestLinearDP(String inputFile)
-  {
-    int i = 0;
-    double dist;
-    double minDist = 9999999;
-    Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
-    ArrayList<Point> rawInput = BuildTestData(inputFile);
-    ArrayList<SearchResult> results = new ArrayList<SearchResult>();
+	/*
+	Given a file containing an input stream of sensor points, compares that sequence with
+	every word in the vocabulary. This version runs the linear trace-to-word distance measure,
+	using some heuristics for reducing computational complexity of comparing linear distances.
+	The linear sequence dynamic programming model should provide about the best/most-precise signal-trace
+	distance metric possible.
+	*/
+	public void TestLinearDP(String inputFile)
+	{
+		int i = 0;
+		double dist;
+		double minDist = 9999999;
+		Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
+	//ArrayList<Point> rawInput = BuildTestData(inputFile);
+		ArrayList<Point> testPoints = BuildTestData(inputFile);
+		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
-	//experimental: optionally filter the input points, and check the effect on performance
-	ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
-	ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
-	//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,12);
-	System.out.println("num test points: "+testPoints.size());
+		//experimental: optionally filter the input points, and check the effect on performance
+	//ArrayList<PointMu> pointMus = _signalProcessor.Process(rawInput);
+	//ArrayList<Point> testPoints = PointMu.PointMuListToPointList(pointMus);
+		testPoints = _signalProcessor.SlidingMeanFilter(testPoints,5);
+		System.out.println("num test points: "+testPoints.size());
 
-	for(String word : vocab){
-		ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(word);
-		ArrayList<Line> lineSequence = Line.PointsToLineSequence(hiddenSequence);
+		for(String word : vocab){
+			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
+			ArrayList<Line> lineSequence = Line.PointsToLineSequence(hiddenSequence);
 
-		dist = CompareLinearSequences(testPoints,lineSequence,-1.0);
-		if(dist > 0){
-			SearchResult result = new SearchResult(dist,word);
-			results.add(result);
-			if(dist < minDist){
-				minDist = dist;
+			dist = CompareLinearSequences(testPoints,lineSequence,-1.0);
+			if(dist >= 0){
+				SearchResult result = new SearchResult(dist,word);
+				results.add(result);
+				if(dist < minDist){
+					minDist = dist;
+				}
+			}
+			
+			if(word == "MISSISSIPPI"){
+				System.out.println("missip: "+dist);
+			}
+
+			i++;
+			/*
+			if(i > 30){
+			break;
+			}
+			*/
+			if(i % 1000 == 999){
+				System.out.println(i);  
 			}
 		}
 
-		i++;
-		/*
-		if(i > 30){
-		break;
-		}
-		*/
-		if(i % 1000 == 999){
-			System.out.println(i);  
-		}
-	}
+		Collections.sort(results);
 
-	Collections.sort(results);
-
-	i = 0;
-	System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
-	for(SearchResult result : results){
-	System.out.print(Integer.toString(i+1)+":  ");
-	result.Print();
-	i++;
-	if(i > 100){
-	break;
-	}
-	//System.out.print("\r\n");
-	}
+		i = 0;
+		System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
+		for(SearchResult result : results){
+			System.out.print(Integer.toString(i+1)+":  ");
+			result.Print();
+			i++;
+			/*
+			if(i > 10000){
+				break;
+			}
+			*/
+			//System.out.print("\r\n");
+		}
 	}
   
 
@@ -442,12 +449,13 @@ public class DpTwitch
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		DpTwitch twitch = new DpTwitch(keyMapFile);
 
+		/*
 		twitch.TestWordPointwise(wordFile,word);
 		twitch.TestWordPointwise(wordFile,"BILOXI");
 		twitch.TestWordPointwise(wordFile,"ALABAMA");
 		twitch.TestWordPointwise(wordFile,"ABC");
-
-		twitch.TestPointwiseDP(wordFile);
+		*/
+		//twitch.TestPointwiseDP(wordFile);
 		twitch.TestLinearDP(wordFile);
 	}
 }
