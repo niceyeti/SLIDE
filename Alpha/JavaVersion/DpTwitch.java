@@ -23,16 +23,18 @@ public class DpTwitch
   //for backtracking
   public enum Direction{UP, LEFT, DIAG}
 
-  //primitive dp matrix cell
-  private class MatrixCell{
-    public double Score;
-    public Direction Backpointer;
+	//primitive dp matrix cell
+	private class MatrixCell
+	{
+		public double Score;
+		public Direction Backpointer;
 
-    public MatrixCell(){
-      Score = 10000000;
-      Backpointer = Direction.DIAG;
-    }
-  }
+		public MatrixCell()
+		{
+			Score = 10000000;
+			Backpointer = Direction.DIAG;
+		}
+	}
 
   //for use or just experimentation
   SignalProcessor _signalProcessor;
@@ -41,6 +43,7 @@ public class DpTwitch
   MatrixCell[][] _matrix;  
   int MAX_ROWS;
   int MAX_COLS;
+  int PHI_DIM;
   Direction _direction;
   
   public DpTwitch(String keyMapFile)
@@ -49,6 +52,7 @@ public class DpTwitch
 
     MAX_ROWS = 1000;
     MAX_COLS = 100;
+	PHI_DIM = 3;
 
     //build the keymap
     _keyMap = new KeyMap(keyMapFile);
@@ -449,8 +453,209 @@ public class DpTwitch
 			//System.out.print("\r\n");
 		}
 	}
+ 
+ 	/*
+ 	The perceptron-weighted dp update method. This is entirely experimental.
+ 	
+ 	TODO: Currently this only uses left and up feature weights, which is likely sufficient for now.
+ 	*/
+	private void _scoreCell_BasicWeighted(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
+	{
+		//TODO: this assumes row and col are positive, non-zero. Needs error check
+		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
+			//left cell is greater, so take from it and point back to it
+			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] * Point.DoubleDistance(datum, keyPoint);
+			//matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
+			matrix[row][col].Backpointer = Direction.LEFT;
+		}
+		else{
+			//upper cell is greater, so take from it instead and point up
+			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] * Point.DoubleDistance(datum, keyPoint);
+			//matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
+			matrix[row][col].Backpointer = Direction.UP;
+		}
+	}
   
+  	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	///// All the following are experimental methods for testing weighted, structured-perceptron based learning using
+	///// dynamic programming. None of this code is formalized, since its experimental.
+	
+	/*
+	BasicWeightedDp: The first test for basic perceptron-weighted dynamic programming. This method is intended
+	to establish viability, whether or not perceptron-weighted-dp even works.
+	
+	Keep this method simple, as a prototype. The weights should encompass only penalties for insertion, deletion, 
+	and substitiution. The dynamic program is the same as above pointwise methods, except that the penalty weights
+	are expected to change over iterations.
+	
+	Returns: A StructuredResult object.
+	
+	TODO: Could just store and return top-scoring word over all words, rather than the expensive sort() call.
+	*/
+	public StructuredResult BasicWeightedDpInference(ArrayList<Point> xSeq, double[] weights)
+	{
+		int i = 0;
+		double dist;
+		double minDist = 9999999;
+		Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
+		//ArrayList<Point> testPoints = BuildTestData(inputFile);
+		ArrayList<Point> testPoints = xSeq;
+		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
+		//experimental: optionally filter the input points, and check the effect on performance
+		//ArrayList<PointMu> pointMus = _signalProcessor.Process(testPoints);
+		//testPoints = PointMu.PointMuListToPointList(pointMus);
+		//simple, modest filtering
+		testPoints = _signalProcessor.SlidingMeanFilter(testPoints,2);
+		//testPoints = _signalProcessor.RedundancyFilter(testPoints);
+		System.out.println("num test points: "+testPoints.size());
+
+		for(String word : vocab){
+			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
+			dist = BasicWeightedDp(testPoints, hiddenSequence, weights, -1);
+			if(dist >= 0){
+				SearchResult result = new SearchResult(dist,word);
+				results.add(result);
+				if(dist < minDist){
+					minDist = dist;
+				}
+			}
+
+			i++;
+			/*
+			if(i > 30){
+			break;
+			}
+			*/
+			if(i % 1000 == 999){
+				System.out.println(i);  
+			}
+		}
+		Collections.sort(results);
+
+		i = 0;
+		System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
+		for(SearchResult result : results){
+			System.out.print(Integer.toString(i+1)+":  ");
+			result.Print();
+			i++;
+			if(i > 100){
+				break;
+			}
+			//System.out.print("\r\n");
+		}
+		
+		return new StructuredResult(results.get(0).GetWord(), results.get(0).GetScore());
+	}
+	
+	/*
+	Unique to dynamic-programming+perceptron experiments. Runs forward
+	algorithm according to weights, then x vector summed over the x values
+	given by the back pointers.
+	*/
+	public double[] DpPhi(ArrayList<Point> xSeq, String word, double[] weights)
+	{	
+		ArrayList<Point> wordSequence = _keyMap.WordToPointSequence(" "+word+" ");
+		//run forward program
+		BasicWeightedDp(xSeq, wordSequence, weights, -1);
+		//backtrack to derive phi
+		return _phiBacktrack(xSeq.size()-1, wordSequence.size()-1);
+	}
+	
+	/*
+	precondition: BasicWeightedDp has been called, initializing the backpointers for some input word.
+	*/
+	private double[] _phiBacktrack(int startRow, int startCol)
+	{
+		int row, col;
+		double[] phi = new double[PHI_DIM];
+
+		//zero the vector
+		for(int i = 0; i < phi.length; i++){
+			phi[i] = 0;
+		}
+		
+		row = startRow;
+		col = startCol;
+		while(row > 0 || col > 0){ //this loop construction works, assuming matrix backpointers at edges have been initialized such that row/col indices never go negative
+			if(_matrix[row][col].Backpointer == _direction.UP){
+				phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
+				row--;
+			}
+			else if(_matrix[row][col].Backpointer == _direction.LEFT){
+				phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
+				col--;
+			}
+			/*
+			NOT YET USED
+			else if(_matrix[row][col].Backpointer == _direction.SUB){
+				phi[_direction.SUB.ordinal()] += _matrix[row][col].Score;
+				row--;
+				col--;
+			}
+			*/
+		}
+		
+		return phi;
+	}
+	
+	/*
+	Runs the weighted dynamic program. Note that a post-condition of this method is that the dynamic programming table
+	has its backpointers initialized, such that immediately after this call one could backtrack to get the phi() vector
+	for this 
+	*/
+	public double BasicWeightedDp(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
+	{
+		int i,j;
+		int INF = 10000000;
+		double rowMin = 0;
+
+		if(inputSequence.size() <= 1){
+			System.out.println("ERROR sequence1 too short for dpTwitch"+inputSequence.size());
+			return -1;
+		}
+		if(wordSequence.size() <= 1){
+			System.out.println("ERROR sequence2 too short for dpTwitch: "+wordSequence.size());
+			return -1;
+		}
+
+		//initialize the dp table, for distance minimization
+		_matrix[0][0].Backpointer = _direction.UP;
+		_matrix[0][0].Score = weights[_direction.UP.ordinal()] * Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
+		for(j = 1; j < wordSequence.size(); j++){
+			//init the first row
+			_matrix[0][j].Score = weights[_direction.LEFT.ordinal()] * Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + _matrix[0][j-1].Score;
+			_matrix[0][j].Backpointer = Direction.LEFT;
+		}
+		for(i = 1; i < inputSequence.size(); i++){
+			//init the first column
+			_matrix[i][0].Score = weights[_direction.UP.ordinal()] * Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + _matrix[i-1][0].Score;
+			_matrix[i][0].Backpointer = Direction.UP;
+		}
+
+		//run the forward algorithm
+		for(i = 1; i < inputSequence.size(); i++){
+			rowMin = INF;
+			for(j = 1; j < wordSequence.size(); j++){
+				//the recurrence
+				_scoreCell_BasicWeighted(i, j, inputSequence.get(i), wordSequence.get(j), _matrix, weights);
+				if(_matrix[i][j].Score < rowMin){
+					rowMin = _matrix[i][j].Score;
+				}
+			}
+			if(threshold > 0 && rowMin > threshold){
+				return INF;
+			}
+		}
+
+		//_printMatrix(inputSequence.size(),wordSequence.size());
+
+		//for optimal global alignment, the bottom-rightmost cell will have the score for this alignment
+		return _matrix[inputSequence.size()-1][wordSequence.size()-1].Score;
+	}
+
+	/*
+	///CANONICAL DP METHOD TESTING
 	public static void main(String[] args)
 	{
 		String wordFile = "./resources/testing/performance/word12.txt";
@@ -458,13 +663,14 @@ public class DpTwitch
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		DpTwitch twitch = new DpTwitch(keyMapFile);
 
-		/*
-		twitch.TestWordPointwise(wordFile,word);
-		twitch.TestWordPointwise(wordFile,"BILOXI");
-		twitch.TestWordPointwise(wordFile,"ALABAMA");
-		twitch.TestWordPointwise(wordFile,"ABC");
-		*/
+		
+		//twitch.TestWordPointwise(wordFile,word);
+		//twitch.TestWordPointwise(wordFile,"BILOXI");
+		//twitch.TestWordPointwise(wordFile,"ALABAMA");
+		//twitch.TestWordPointwise(wordFile,"ABC");
+		
 		twitch.TestPointwiseDP(wordFile);
 		//twitch.TestLinearDP(wordFile);
 	}
+	*/
 }
