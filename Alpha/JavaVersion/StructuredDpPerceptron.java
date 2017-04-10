@@ -16,16 +16,15 @@ Primary public methods:
 	Train()
 	Test()
 */
-public class StructuredPerceptron
+public class StructuredDpPerceptron
 {
 	double[] _weights;
 	double _alpha;
 	InferenceAlgorithm _inferenceAlgorithm;
 
-	public StructuredPerceptron(int weightDimension, double alpha)
+	public StructuredDpPerceptron(int weightDimension, double alpha)
 	{
 		_alpha = alpha;
-
 		_weights = new double[weightDimension];
 		_setRandomWeights();
 		_inferenceAlgorithm = new InferenceAlgorithm();
@@ -50,24 +49,25 @@ public class StructuredPerceptron
 	y is the intended output word w, which is a sequence of (x,y) points representing the letter coordinate sequence of some word.
 	See Dataset class.
 	*/
-	public Train(StructuredDataset D, int maxIterations)
+	public void Train(StructuredDataset D, int maxIterations)
 	{
 		int i;
 		double[] phiHat;
 		double[] phiStar;
 		boolean updateOccurred, isConverged;
 		StructuredResult yHat;
-	
+
+		System.out.println("Running training...");	
 		//loop until convergence: no update occurs in inner loop or maxIterations reached
 		for(i = 0, isConverged = false; i < maxIterations && !isConverged; i++){
 			updateOccurred = false;
 			//the canonical structured perceptron loop
-			for(StructuredExample d : D){
-				yHat = _inferenceAlgorithm.Infer(d.XSequence);
+			for(StructuredExample d : D.GetTrainingExamples()){
+				yHat = _inferenceAlgorithm.Infer(d.XSequence, _weights);
 				//check for update
 				if(yHat.Word != d.Word){
 					//note the uniqueness of this framework, as the weights are passed in to derive Phi()
-					phiHat = _inferenceAlgorithm.Phi(d.XSequence, yHat.Word, _weights);
+					phiHat =  _inferenceAlgorithm.Phi(d.XSequence, yHat.Word, _weights);
 					phiStar = _inferenceAlgorithm.Phi(d.XSequence, d.Word, _weights);
 					//update weights
 					_updateWeights(d.XSequence, phiHat, phiStar);
@@ -83,7 +83,7 @@ public class StructuredPerceptron
 
 	private void _printWeights()
 	{
-		for(int i = 0; i < _weights.size(); i++){
+		for(int i = 0; i < _weights.length; i++){
 			System.out.print(Double.toString(_weights[i])+" ");
 		}
 		System.out.print("\n");
@@ -116,16 +116,14 @@ public class StructuredPerceptron
 
 	public static void main(String[] args)
 	{
-		String wordFile = "./resources/testing/performance/word12.txt";
-		String word = "MISSISSIPPI";
 		String keyMapFile = "./resources/ui/keyMap.txt";
-		DpTwitch twitch = new DpTwitch(keyMapFile);
-		StructuredDataset trainingData = new StructuredDataset();
+		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.01);
 		
+		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt","./resources/testing/structuredData/word2.txt","./resources/testing/structuredData/word3.txt"};
+		trainingData.BuildTrainingData(trainingFiles);
 		
-		
-		
-		
+		dpPerceptron.Train(trainingData,10);
 		//twitch.TestLinearDP(wordFile);
 	}
 }

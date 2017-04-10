@@ -1,3 +1,10 @@
+import java.io.*;
+import java.util.Set;  //for word set w/in DirectInference class
+import java.util.HashSet;
+import java.util.Collections; //sorting
+import java.util.ArrayList;
+
+
 /*
 Container class for constructing 
 */
@@ -21,9 +28,14 @@ public class StructuredDataset
 	
 		for(String path : trainingFiles)
 		{
-			example = _readTrainingExample(path)
-			_trainingExamples.add();
+			StructuredExample example = _readTrainingExample(path);
+			_trainingExamples.add(example);
 		}
+	}
+
+	public ArrayList<StructuredExample> GetTrainingExamples()
+	{
+		return _trainingExamples;
 	}
 
 	/*
@@ -36,7 +48,7 @@ public class StructuredDataset
 		ArrayList<Point> xSequence;
 		ArrayList<Point> ySequence;
 		String word;
-		StructureExample example;
+		StructuredExample example = null;
 
 		try{
 			BufferedReader br = new BufferedReader(new FileReader(exampleFilePath));
@@ -45,16 +57,16 @@ public class StructuredDataset
 
 			xSequence = new ArrayList<Point>();
 			//read the target word from the first line of the file, and convert to y-sequence
-			String word = br.readLine();
+			word = br.readLine();
 			ySequence = _keyMap.WordToPointSequence(word);
 			//read sensor stream of (x,y) points from subsequent lines
 			while((line = br.readLine()) != null){
 				tokens = line.trim().split("\t");
 				if(tokens.length != 2){
-					System.out.println("ERROR incorrect number of tokens for this line >"+line+"< in test input file "+testFilePath);
+					System.out.println("ERROR incorrect number of tokens for this line >"+line+"< in test input file "+exampleFilePath);
 				}
 				else if(!Utilities.IsIntString(tokens[0]) || !Utilities.IsIntString(tokens[1])){
-					System.out.println("ERROR non-integer tokens for this line >"+line+"< in test input file "+testFilePath);
+					System.out.println("ERROR non-integer tokens for this line >"+line+"< in test input file "+exampleFilePath);
 				}
 				else{
 					try{
@@ -64,20 +76,20 @@ public class StructuredDataset
 						xSequence.add(pt);
 					}
 					catch(NumberFormatException ex){
-						System.out.println("Number format exception >"+ex.getCause().getMessage()+"< caught for test input file >"+testFilePath+"<  Coordinates incorrectly formatted");
+						System.out.println("Number format exception >"+ex.getCause().getMessage()+"< caught for test input file >"+exampleFilePath+"<  Coordinates incorrectly formatted");
 					}
 				}
 			}
 			
-			example = new StructuredExample(xSequence, ySequence, );
+			example = new StructuredExample(xSequence, ySequence, word);
 			
 			br.close();
 		}
 		catch(java.io.FileNotFoundException ex){
-			System.out.println("ERROR FileNotFoundException thrown for file: "+testFilePath);
+			System.out.println("ERROR FileNotFoundException thrown for file: "+exampleFilePath);
 		}
 		catch(java.io.IOException ex){
-			System.out.println("ERROR IOException caught for file "+testFilePath+" due to cause: "+ex.getCause());
+			System.out.println("ERROR IOException caught for file "+exampleFilePath+" due to cause: "+ex.getCause());
 		}
 
 		return example;

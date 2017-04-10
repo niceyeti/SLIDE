@@ -49,10 +49,10 @@ public class InferenceAlgorithm
 		return _dp.DpPhi(xSeq, word, weights);
 	}
 
-	public StructuredResult Infer(ArrayList<Point> xSeq, ArrayList<double> weights)
-	{
+	public StructuredResult Infer(ArrayList<Point> xSeq, double[] weights)
+	{	//(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 		//evaluate and sort all words by their score w.r.t. @xSeq
-		return _dp.BasicWeightedDp(xSeq, weights);
+		return _dp.BasicWeightedDpInference(xSeq, weights);
 	}
 
 }
