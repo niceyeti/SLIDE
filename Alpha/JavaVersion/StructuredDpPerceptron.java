@@ -26,8 +26,21 @@ public class StructuredDpPerceptron
 	{
 		_alpha = alpha;
 		_weights = new double[weightDimension];
-		_setRandomWeights();
+		_initWeights();
 		_inferenceAlgorithm = new InferenceAlgorithm();
+	}
+
+	private void _initWeights()
+	{
+		//_setRandomWeights();
+		_zeroWeights();		
+	}
+
+	private void _zeroWeights()
+	{
+		for(int i = 0; i < _weights.length; i++){
+			_weights[i] = 1.0;
+		}	
 	}
 
 	//not so important for linear perceptron as for neural nets, since the weights are updated directly by x vals
@@ -63,6 +76,7 @@ public class StructuredDpPerceptron
 			updateOccurred = false;
 			//the canonical structured perceptron loop
 			for(StructuredExample d : D.GetTrainingExamples()){
+				_printWeights();
 				yHat = _inferenceAlgorithm.Infer(d.XSequence, _weights);
 				//check for update
 				if(yHat.Word != d.Word){
@@ -77,7 +91,6 @@ public class StructuredDpPerceptron
 			}
 			//model converged if no predictions were incorrect for above loop
 			isConverged = !updateOccurred;
-			_printWeights();
 		}
 		System.out.println("Training completed.");
 		_printWeights();
@@ -85,6 +98,7 @@ public class StructuredDpPerceptron
 
 	private void _printWeights()
 	{
+		System.out.print("Weights:\n");
 		for(int i = 0; i < _weights.length; i++){
 			System.out.print(Double.toString(_weights[i])+" ");
 		}
@@ -113,6 +127,22 @@ public class StructuredDpPerceptron
 		//weight update
 		for(int i = 0; i < phiHat.length; i++){
 			_weights[i] = _weights[i] + _alpha * (phiStar[i] - phiHat[i]);
+		}
+		
+		_normalizeWeights();
+	}
+	
+	//converts weight vector to unit length
+	private void _normalizeWeights()
+	{
+		double sum = 0.0;
+		
+		for(int i = 0; i < _weights.length; i++){
+			sum += _weights[i];
+		}
+		
+		for(int i = 0; i < _weights.length; i++){
+			_weights[i] /= sum;
 		}
 	}
 

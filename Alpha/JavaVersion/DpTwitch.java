@@ -462,18 +462,18 @@ public class DpTwitch
  	*/
 	private void _scoreCell_BasicWeighted(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
 	{
-		matrix[row][col].Dist = Point.DoubleDistance(datum, keyPoint);
+		matrix[row][col].Dist = -Point.DoubleDistance(datum, keyPoint);
 	
 		//TODO: this assumes row and col are positive, non-zero. Needs error check
 		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
 			//left cell is lesser (deletion from word), so update from it and point back to it
-			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] + matrix[row][col].Dist;
+			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] * matrix[row][col].Dist;
 			//matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.LEFT;
 		}
 		else{
 			//upper cell is lesser (deletion from signal), so take from it instead and point up
-			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] + matrix[row][col].Dist;
+			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] * matrix[row][col].Dist;
 			//matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.UP;
 		}
@@ -499,7 +499,7 @@ public class DpTwitch
 	{
 		int i = 0;
 		double dist;
-		double minDist = 9999999;
+		double maxScore = -99999999;
 		//ArrayList<Point> testPoints = BuildTestData(inputFile);
 		ArrayList<Point> testPoints = xSeq;
 		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
@@ -515,6 +515,10 @@ public class DpTwitch
 		for(String word : vocab){
 			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
 			dist = BasicWeightedDp(testPoints, hiddenSequence, weights, -1);
+			SearchResult result = new SearchResult(dist,word);
+			results.add(result);
+
+			/* space/speed optimizations; not used during experimentation
 			if(dist >= 0){
 				SearchResult result = new SearchResult(dist,word);
 				results.add(result);
@@ -522,6 +526,7 @@ public class DpTwitch
 					minDist = dist;
 				}
 			}
+			*/
 
 			i++;
 			/*
@@ -533,8 +538,11 @@ public class DpTwitch
 				System.out.print("\r"+Integer.toString(i)+" of "+Integer.toString(vocab.size())+" "+Integer.toString(results.size())+" results");
 			}
 		}
-		Collections.sort(results);
-
+		//for maximization formulations
+		Collections.sort(results, Collections.reverseOrder());
+		//for minimization formulations
+		//Collections.sort(results);
+		
 		i = 0;
 		System.out.println("\nTop 20 of "+Integer.toString(results.size())+" results: ");
 		for(SearchResult result : results){
@@ -581,13 +589,13 @@ public class DpTwitch
 		col = startCol;
 		while(row > 0 || col > 0){ //this loop construction works, assuming matrix backpointers at edges have been initialized such that row/col indices never go negative
 			if(_matrix[row][col].Backpointer == _direction.UP){
-				phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
-				//phi[_direction.UP.ordinal()]   += 1.0;
+				//phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
+				phi[_direction.UP.ordinal()]   += 1.0;
 				row--;
 			}
 			else if(_matrix[row][col].Backpointer == _direction.LEFT){
-				phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
-				//phi[_direction.LEFT.ordinal()] += 1.0;
+				//phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
+				phi[_direction.LEFT.ordinal()] += 1.0;
 				col--;
 			}
 			/*
@@ -625,15 +633,16 @@ public class DpTwitch
 
 		//initialize the dp table, for distance minimization
 		_matrix[0][0].Backpointer = _direction.UP;
-		_matrix[0][0].Score = Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
+		_matrix[0][0].Score = -Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
+
+		//init the first row		
 		for(j = 1; j < wordSequence.size(); j++){
-			//init the first row
-			_matrix[0][j].Score = Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + weights[_direction.LEFT.ordinal()] * _matrix[0][j-1].Score;
+			_matrix[0][j].Score = -Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + weights[_direction.LEFT.ordinal()] * _matrix[0][j-1].Score;
 			_matrix[0][j].Backpointer = Direction.LEFT;
 		}
+		//init the first column
 		for(i = 1; i < inputSequence.size(); i++){
-			//init the first column
-			_matrix[i][0].Score = Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + weights[_direction.UP.ordinal()] * _matrix[i-1][0].Score;
+			_matrix[i][0].Score = -Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + weights[_direction.UP.ordinal()] * _matrix[i-1][0].Score;
 			_matrix[i][0].Backpointer = Direction.UP;
 		}
 

@@ -39,8 +39,6 @@ public class SearchResult implements Comparable<SearchResult>
   @Override
   public int compareTo(SearchResult res)
   {
-    int ret;
-    ret = (this.GetScore() > res.GetScore()) ? 1 : -1;
-    return ret;
+    return (this.GetScore() >= res.GetScore()) ? 1 : -1;
   }
 }
