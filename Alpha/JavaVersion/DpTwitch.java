@@ -461,21 +461,23 @@ public class DpTwitch
  	*/
 	private void _scoreCell_BasicWeighted(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
 	{
+		double curDist = Point.DoubleDistance(datum, keyPoint);
+	
 		//TODO: this assumes row and col are positive, non-zero. Needs error check
 		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
-			//left cell is greater, so take from it and point back to it
-			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] * Point.DoubleDistance(datum, keyPoint);
+			//left cell is lesser (deletion from word), so update from it and point back to it
+			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] + curDist;
 			//matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.LEFT;
 		}
 		else{
-			//upper cell is greater, so take from it instead and point up
-			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] * Point.DoubleDistance(datum, keyPoint);
+			//upper cell is lesser (deletion from signal), so take from it instead and point up
+			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] + curDist;
 			//matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.UP;
 		}
 	}
-  
+	
   	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	///// All the following are experimental methods for testing weighted, structured-perceptron based learning using
 	///// dynamic programming. None of this code is formalized, since its experimental.
@@ -492,12 +494,11 @@ public class DpTwitch
 	
 	TODO: Could just store and return top-scoring word over all words, rather than the expensive sort() call.
 	*/
-	public StructuredResult BasicWeightedDpInference(ArrayList<Point> xSeq, double[] weights)
+	public StructuredResult BasicWeightedDpInference(ArrayList<Point> xSeq, double[] weights, Vocab vocab)
 	{
 		int i = 0;
 		double dist;
 		double minDist = 9999999;
-		Vocab vocab = new Vocab("./resources/languageModels/vocab.txt");
 		//ArrayList<Point> testPoints = BuildTestData(inputFile);
 		ArrayList<Point> testPoints = xSeq;
 		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
@@ -527,14 +528,14 @@ public class DpTwitch
 			break;
 			}
 			*/
-			if(i % 1000 == 999){
-				System.out.println(i);  
+			if(i % 10000 == 9999){
+				System.out.print("\r"+Integer.toString(i)+" of "+Integer.toString(vocab.size())+" "+Integer.toString(results.size())+" results");
 			}
 		}
 		Collections.sort(results);
 
 		i = 0;
-		System.out.println("Top 20 of "+Integer.toString(results.size())+" results: ");
+		System.out.println("\nTop 20 of "+Integer.toString(results.size())+" results: ");
 		for(SearchResult result : results){
 			System.out.print(Integer.toString(i+1)+":  ");
 			result.Print();
@@ -572,18 +573,20 @@ public class DpTwitch
 
 		//zero the vector
 		for(int i = 0; i < phi.length; i++){
-			phi[i] = 0;
+			phi[i] = 0.0;
 		}
 		
 		row = startRow;
 		col = startCol;
 		while(row > 0 || col > 0){ //this loop construction works, assuming matrix backpointers at edges have been initialized such that row/col indices never go negative
 			if(_matrix[row][col].Backpointer == _direction.UP){
-				phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
+				//phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
+				phi[_direction.UP.ordinal()]   += 1.0;
 				row--;
 			}
 			else if(_matrix[row][col].Backpointer == _direction.LEFT){
-				phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
+				//phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
+				phi[_direction.LEFT.ordinal()] += 1.0;
 				col--;
 			}
 			/*
@@ -621,15 +624,15 @@ public class DpTwitch
 
 		//initialize the dp table, for distance minimization
 		_matrix[0][0].Backpointer = _direction.UP;
-		_matrix[0][0].Score = weights[_direction.UP.ordinal()] * Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
+		_matrix[0][0].Score = Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
 		for(j = 1; j < wordSequence.size(); j++){
 			//init the first row
-			_matrix[0][j].Score = weights[_direction.LEFT.ordinal()] * Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + _matrix[0][j-1].Score;
+			_matrix[0][j].Score = Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + weights[_direction.LEFT.ordinal()] * _matrix[0][j-1].Score;
 			_matrix[0][j].Backpointer = Direction.LEFT;
 		}
 		for(i = 1; i < inputSequence.size(); i++){
 			//init the first column
-			_matrix[i][0].Score = weights[_direction.UP.ordinal()] * Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + _matrix[i-1][0].Score;
+			_matrix[i][0].Score = Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + weights[_direction.UP.ordinal()] * _matrix[i-1][0].Score;
 			_matrix[i][0].Backpointer = Direction.UP;
 		}
 

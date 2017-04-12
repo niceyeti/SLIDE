@@ -23,11 +23,13 @@ public class InferenceAlgorithm
 	//int _phiDimension;
 	//dp-twitch currently holds the kitchen sink of code, methods, keymaps, etc for testing algorithms
 	DpTwitch _dp;
+	Vocab _vocab;
 
 	public InferenceAlgorithm()
 	{
 		//_phiDimension = phiDimension;
-		_dp = new DpTwitch("./resources/ui/keyMap.txt");	
+		_dp = new DpTwitch("./resources/ui/keyMap.txt");
+		_vocab = new Vocab("./resources/languageModels/vocab.txt");
 	}
 
 	/*
@@ -52,8 +54,7 @@ public class InferenceAlgorithm
 	public StructuredResult Infer(ArrayList<Point> xSeq, double[] weights)
 	{	//(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 		//evaluate and sort all words by their score w.r.t. @xSeq
-		return _dp.BasicWeightedDpInference(xSeq, weights);
+		return _dp.BasicWeightedDpInference(xSeq, weights, _vocab);
 	}
-
 }
 

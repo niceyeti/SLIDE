@@ -66,6 +66,7 @@ public class StructuredDpPerceptron
 				yHat = _inferenceAlgorithm.Infer(d.XSequence, _weights);
 				//check for update
 				if(yHat.Word != d.Word){
+					System.out.println("Incorrectly predicted "+yHat.Word+" for "+d.Word);
 					//note the uniqueness of this framework, as the weights are passed in to derive Phi()
 					phiHat =  _inferenceAlgorithm.Phi(d.XSequence, yHat.Word, _weights);
 					phiStar = _inferenceAlgorithm.Phi(d.XSequence, d.Word, _weights);
@@ -76,6 +77,7 @@ public class StructuredDpPerceptron
 			}
 			//model converged if no predictions were incorrect for above loop
 			isConverged = !updateOccurred;
+			_printWeights();
 		}
 		System.out.println("Training completed.");
 		_printWeights();
@@ -118,11 +120,23 @@ public class StructuredDpPerceptron
 	{
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.01);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.1);
 		
-		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt","./resources/testing/structuredData/word2.txt","./resources/testing/structuredData/word3.txt"};
+		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
+											"./resources/testing/structuredData/word2.txt",
+											"./resources/testing/structuredData/word3.txt",
+											"./resources/testing/structuredData/word4.txt",
+											"./resources/testing/structuredData/word5.txt",
+											"./resources/testing/structuredData/word6.txt",
+											"./resources/testing/structuredData/word7.txt",
+											"./resources/testing/structuredData/word8.txt",
+											"./resources/testing/structuredData/word9.txt",
+											"./resources/testing/structuredData/word10.txt",
+											"./resources/testing/structuredData/word11.txt",
+											"./resources/testing/structuredData/word12.txt"};
+
 		trainingData.BuildTrainingData(trainingFiles);
-		
+
 		dpPerceptron.Train(trainingData,10);
 		//twitch.TestLinearDP(wordFile);
 	}
