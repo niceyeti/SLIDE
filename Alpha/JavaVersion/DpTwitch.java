@@ -26,7 +26,8 @@ public class DpTwitch
 	//primitive dp matrix cell
 	private class MatrixCell
 	{
-		public double Score;
+		public double Score; //recursive score
+		public double Dist; //geometric distance
 		public Direction Backpointer;
 
 		public MatrixCell()
@@ -461,18 +462,18 @@ public class DpTwitch
  	*/
 	private void _scoreCell_BasicWeighted(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
 	{
-		double curDist = Point.DoubleDistance(datum, keyPoint);
+		matrix[row][col].Dist = Point.DoubleDistance(datum, keyPoint);
 	
 		//TODO: this assumes row and col are positive, non-zero. Needs error check
 		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
 			//left cell is lesser (deletion from word), so update from it and point back to it
-			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] + curDist;
+			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] + matrix[row][col].Dist;
 			//matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.LEFT;
 		}
 		else{
 			//upper cell is lesser (deletion from signal), so take from it instead and point up
-			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] + curDist;
+			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] + matrix[row][col].Dist;
 			//matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
 			matrix[row][col].Backpointer = Direction.UP;
 		}
@@ -580,13 +581,13 @@ public class DpTwitch
 		col = startCol;
 		while(row > 0 || col > 0){ //this loop construction works, assuming matrix backpointers at edges have been initialized such that row/col indices never go negative
 			if(_matrix[row][col].Backpointer == _direction.UP){
-				//phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
-				phi[_direction.UP.ordinal()]   += 1.0;
+				phi[_direction.UP.ordinal()] += _matrix[row][col].Score;
+				//phi[_direction.UP.ordinal()]   += 1.0;
 				row--;
 			}
 			else if(_matrix[row][col].Backpointer == _direction.LEFT){
-				//phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
-				phi[_direction.LEFT.ordinal()] += 1.0;
+				phi[_direction.LEFT.ordinal()] += _matrix[row][col].Score;
+				//phi[_direction.LEFT.ordinal()] += 1.0;
 				col--;
 			}
 			/*
