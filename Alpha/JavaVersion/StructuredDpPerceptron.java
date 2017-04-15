@@ -21,25 +21,28 @@ public class StructuredDpPerceptron
 	double[] _weights;
 	double _alpha;
 	InferenceAlgorithm _inferenceAlgorithm;
+	
 
-	public StructuredDpPerceptron(int weightDimension, double alpha)
+	public StructuredDpPerceptron(int weightDimension, double alpha, String vocabPath)
 	{
 		_alpha = alpha;
 		_weights = new double[weightDimension];
-		_initWeights();
-		_inferenceAlgorithm = new InferenceAlgorithm();
+		//_initWeights();
+		_weights[0] = 1.0;
+		_weights[1] = -1.0;
+		_inferenceAlgorithm = new InferenceAlgorithm(weightDimension, vocabPath);
 	}
 
 	private void _initWeights()
 	{
 		//_setRandomWeights();
-		_zeroWeights();		
+		_zeroWeights();
 	}
 
 	private void _zeroWeights()
 	{
 		for(int i = 0; i < _weights.length; i++){
-			_weights[i] = 1.0;
+			_weights[i] = 0.0;
 		}	
 	}
 
@@ -51,6 +54,22 @@ public class StructuredDpPerceptron
 		for(int i = 0; i < _weights.length; i++){
 			_weights[i] = r.nextDouble();
 		}
+	}
+
+	//Utility for tracking rank metrics, such as tracking the ranking of y-star in the results, over iterations.
+	private int _getRank(ArrayList<SearchResult> results, String word)
+	{
+		int i = 0;
+		int rank = -1;
+		for(SearchResult result : results){
+			if(result.GetWord().equals(word)){
+				rank = i;
+				break; 
+			}
+			i++;
+		}
+		
+		return rank;
 	}
 
 	/*
@@ -67,28 +86,42 @@ public class StructuredDpPerceptron
 		int i;
 		double[] phiHat;
 		double[] phiStar;
+		double avgRanking;
 		boolean updateOccurred, isConverged;
-		StructuredResult yHat;
+		SearchResult yHat;
+		ArrayList<SearchResult> inferences;
 
 		System.out.println("Running training...");	
 		//loop until convergence: no update occurs in inner loop or maxIterations reached
+		//This loop attempts to maximize the ranking of y_star, hence performance is measured as such, over iterations.
 		for(i = 0, isConverged = false; i < maxIterations && !isConverged; i++){
 			updateOccurred = false;
 			//the canonical structured perceptron loop
+			avgRanking = 0.0;
 			for(StructuredExample d : D.GetTrainingExamples()){
 				_printWeights();
-				yHat = _inferenceAlgorithm.Infer(d.XSequence, _weights);
+				inferences = _inferenceAlgorithm.Infer(d.XSequence, _weights);
+				yHat = inferences.get(0);
+				avgRanking += _getRank(inferences, d.Word);
 				//check for update
-				if(yHat.Word != d.Word){
-					System.out.println("Incorrectly predicted "+yHat.Word+" for "+d.Word);
+				if(!yHat.GetWord().equals(d.Word)){
+					System.out.println("Incorrectly predicted "+yHat.GetWord()+" for "+d.Word);
 					//note the uniqueness of this framework, as the weights are passed in to derive Phi()
-					phiHat =  _inferenceAlgorithm.Phi(d.XSequence, yHat.Word, _weights);
+					phiHat =  _inferenceAlgorithm.Phi(d.XSequence, yHat.GetWord(), _weights);
 					phiStar = _inferenceAlgorithm.Phi(d.XSequence, d.Word, _weights);
 					//update weights
 					_updateWeights(phiHat, phiStar);
 					updateOccurred = true;
 				}
+				else{
+					System.out.println("Correctly predicted "+yHat.GetWord()+" for "+d.Word);
+				}
 			}
+			//track the average ranking of the correct prediction, to observe whether or not the rank is reduced as desired
+			avgRanking /= (double)D.GetSize();
+			
+			System.out.println("Iteration "+Integer.toString(i)+" avg y-star rank: "+Double.toString(avgRanking));			
+			
 			//model converged if no predictions were incorrect for above loop
 			isConverged = !updateOccurred;
 		}
@@ -129,7 +162,7 @@ public class StructuredDpPerceptron
 			_weights[i] = _weights[i] + _alpha * (phiStar[i] - phiHat[i]);
 		}
 		
-		_normalizeWeights();
+		//_normalizeWeights();
 	}
 	
 	//converts weight vector to unit length
@@ -148,9 +181,11 @@ public class StructuredDpPerceptron
 
 	public static void main(String[] args)
 	{
+		//String vocabPath = "./resources/languageModels/vocab.txt";
+		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.1);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(2, 0.001, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",
@@ -162,8 +197,7 @@ public class StructuredDpPerceptron
 											"./resources/testing/structuredData/word8.txt",
 											"./resources/testing/structuredData/word9.txt",
 											"./resources/testing/structuredData/word10.txt",
-											"./resources/testing/structuredData/word11.txt",
-											"./resources/testing/structuredData/word12.txt"};
+											"./resources/testing/structuredData/word11.txt"};
 
 		trainingData.BuildTrainingData(trainingFiles);
 

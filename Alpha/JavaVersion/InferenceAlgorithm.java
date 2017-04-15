@@ -25,11 +25,11 @@ public class InferenceAlgorithm
 	DpTwitch _dp;
 	Vocab _vocab;
 
-	public InferenceAlgorithm()
+	public InferenceAlgorithm(int phiDimension, String vocabPath)
 	{
 		//_phiDimension = phiDimension;
-		_dp = new DpTwitch("./resources/ui/keyMap.txt");
-		_vocab = new Vocab("./resources/languageModels/vocab.txt");
+		_dp = new DpTwitch("./resources/ui/keyMap.txt", phiDimension);
+		_vocab = new Vocab(vocabPath);
 	}
 
 	/*
@@ -51,7 +51,12 @@ public class InferenceAlgorithm
 		return _dp.DpPhi(xSeq, word, weights);
 	}
 
-	public StructuredResult Infer(ArrayList<SignalDatum> xSeq, double[] weights)
+	/*
+	Since this is a ranking problem, I decided to return the entire ranked list determine by the inference
+	procedure, rather than only the top scoring y_hat. Its easier to track metrics this way, and more
+	information can be leveraged from the results as well.
+	*/
+	public ArrayList<SearchResult> Infer(ArrayList<SignalDatum> xSeq, double[] weights)
 	{	//(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 		//evaluate and sort all words by their score w.r.t. @xSeq
 		return _dp.BasicWeightedDpInference(xSeq, weights, _vocab);

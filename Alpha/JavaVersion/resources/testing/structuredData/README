@@ -9,6 +9,7 @@ by the stream of sensor inputs representing that word on subsequent lines.
 Note that in code you can also test performance by adding random error to the cooredinates in these
 files, as far as testing error tolerance
 
-The actual input sequence here is for the sentence "The quick brown fox jumped over the lazy
-dog in Biloxi Mississippi".
+The actual input sequence here is for the sentence "The quick brown jumped over the lazy
+dog in Biloxi Mississippi". (The file containing "fox" inputs for the canonical test 
+phrase "...quick brown fox..." appears to have been lost.)
 

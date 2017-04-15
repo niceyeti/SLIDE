@@ -37,6 +37,11 @@ public class StructuredDataset
 	{
 		return _trainingExamples;
 	}
+	
+	public double GetSize()
+	{
+		return _trainingExamples.size();
+	}
 
 	/*
 	Reads in a StructuredExample file, for which the first line contains the target word, and the subsequent lines

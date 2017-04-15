@@ -1,0 +1,2 @@
+grep ":  [A-Z]*:-[0-9]*" junk.txt | uniq | cut -d':' -f2 > junk2.txt
+
