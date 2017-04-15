@@ -460,9 +460,9 @@ public class DpTwitch
  	
  	TODO: Currently this only uses left and up feature weights, which is likely sufficient for now.
  	*/
-	private void _scoreCell_BasicWeighted(int row, int col, Point datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
+	private void _scoreCell_BasicWeighted(int row, int col, SignalDatum datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
 	{
-		matrix[row][col].Dist = -Point.DoubleDistance(datum, keyPoint);
+		matrix[row][col].Dist = -Point.DoubleDistance(datum.point, keyPoint);
 	
 		//TODO: this assumes row and col are positive, non-zero. Needs error check
 		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
@@ -495,26 +495,26 @@ public class DpTwitch
 	
 	TODO: Could just store and return top-scoring word over all words, rather than the expensive sort() call.
 	*/
-	public StructuredResult BasicWeightedDpInference(ArrayList<Point> xSeq, double[] weights, Vocab vocab)
+	public StructuredResult BasicWeightedDpInference(ArrayList<SignalDatum> xSeq, double[] weights, Vocab vocab)
 	{
 		int i = 0;
 		double dist;
 		double maxScore = -99999999;
 		//ArrayList<Point> testPoints = BuildTestData(inputFile);
-		ArrayList<Point> testPoints = xSeq;
+		//ArrayList<Point> testPoints = xSeq;
 		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
 
 		//experimental: optionally filter the input points, and check the effect on performance
 		//ArrayList<PointMu> pointMus = _signalProcessor.Process(testPoints);
 		//testPoints = PointMu.PointMuListToPointList(pointMus);
 		//simple, modest filtering
-		testPoints = _signalProcessor.SlidingMeanFilter(testPoints,2);
+		//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,2);
 		//testPoints = _signalProcessor.RedundancyFilter(testPoints);
-		System.out.println("num test points: "+testPoints.size());
+		System.out.println("num test points: "+xSeq.size());
 
 		for(String word : vocab){
 			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
-			dist = BasicWeightedDp(testPoints, hiddenSequence, weights, -1);
+			dist = BasicWeightedDp(xSeq, hiddenSequence, weights, -1);
 			SearchResult result = new SearchResult(dist,word);
 			results.add(result);
 
@@ -563,7 +563,7 @@ public class DpTwitch
 	algorithm according to weights, then x vector summed over the x values
 	given by the back pointers.
 	*/
-	public double[] DpPhi(ArrayList<Point> xSeq, String word, double[] weights)
+	public double[] DpPhi(ArrayList<SignalDatum> xSeq, String word, double[] weights)
 	{	
 		ArrayList<Point> wordSequence = _keyMap.WordToPointSequence(" "+word+" ");
 		//run forward program
@@ -616,7 +616,7 @@ public class DpTwitch
 	has its backpointers initialized, such that immediately after this call one could backtrack to get the phi() vector
 	for this 
 	*/
-	public double BasicWeightedDp(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
+	public double BasicWeightedDp(ArrayList<SignalDatum> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 	{
 		int i,j;
 		int INF = 10000000;
@@ -633,16 +633,16 @@ public class DpTwitch
 
 		//initialize the dp table, for distance minimization
 		_matrix[0][0].Backpointer = _direction.UP;
-		_matrix[0][0].Score = -Point.DoubleDistance(inputSequence.get(0), wordSequence.get(0));
+		_matrix[0][0].Score = -Point.DoubleDistance(inputSequence.get(0).point, wordSequence.get(0));
 
 		//init the first row		
 		for(j = 1; j < wordSequence.size(); j++){
-			_matrix[0][j].Score = -Point.DoubleDistance(inputSequence.get(0), wordSequence.get(j)) + weights[_direction.LEFT.ordinal()] * _matrix[0][j-1].Score;
+			_matrix[0][j].Score = -Point.DoubleDistance(inputSequence.get(0).point, wordSequence.get(j)) + weights[_direction.LEFT.ordinal()] + _matrix[0][j-1].Score;
 			_matrix[0][j].Backpointer = Direction.LEFT;
 		}
 		//init the first column
 		for(i = 1; i < inputSequence.size(); i++){
-			_matrix[i][0].Score = -Point.DoubleDistance(inputSequence.get(i), wordSequence.get(0)) + weights[_direction.UP.ordinal()] * _matrix[i-1][0].Score;
+			_matrix[i][0].Score = -Point.DoubleDistance(inputSequence.get(i).point, wordSequence.get(0)) + weights[_direction.UP.ordinal()] * _matrix[i-1][0].Score;
 			_matrix[i][0].Backpointer = Direction.UP;
 		}
 

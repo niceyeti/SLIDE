@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.ArrayList;
+import java.lang.Math;
 
 
 
@@ -28,11 +29,16 @@ public class SignalProcessor
   int _innerDxThreshold;
   int _triggerThreshold;
 
-  public SignalProcessor(){
+  public SignalProcessor()
+  {
     System.out.println("ERROR SignalProcessor default constructor called, with no keyMap parameter. Use ctor with KeyMap parameter only.");
   }
   
-  public SignalProcessor(KeyMap kmap, int dxThresh, int innerDxThresh, int triggerThresh){
+  public SignalProcessor(KeyMap kmap, int dxThresh, int innerDxThresh, int triggerThresh)
+  {
+  
+  	System.out.println("WARNING DOOFUS. Under special conditions, the signal proc could still index out of bounds arrays. See TODO's");
+	System.out.println("Eg, window size greater than length of signal, etc");
     if(kmap == null){
       System.out.println("ERROR null keyMap reference passed to SignalProcessor constructor, expect crash...");
     }
@@ -40,7 +46,8 @@ public class SignalProcessor
     SetEventParameters(dxThresh,innerDxThresh,triggerThresh);
   }
 
-  public void SetEventParameters(int dxThresh, int innerDxThresh, int triggerThresh){
+  public void SetEventParameters(int dxThresh, int innerDxThresh, int triggerThresh)
+  {
     _dxThreshold = dxThresh;
     _innerDxThreshold = innerDxThresh;
     _triggerThreshold = triggerThresh;
@@ -54,7 +61,8 @@ public class SignalProcessor
   
   This is a pre-filter function, closer to raw signal conditioning, but targeting application specific properties.
   */
-  public ArrayList<Point> SlidingMeanFilter(ArrayList<Point> pointStream, int k){
+  public ArrayList<Point> SlidingMeanFilter(ArrayList<Point> pointStream, int k)
+  {
 	double muX, muY;
   	ArrayList<Point> output = new ArrayList<Point>();
   	
@@ -281,6 +289,81 @@ public class SignalProcessor
       i++;
     }
   }
+  
+  
+  /*
+  Given a list of raw sensor readings, decorates the readings for every point with additional
+  kinematic and statistical details. This does NO conditioning or filtering, etc.
+  
+  Note that stdev has a hyper parameter of the window length over which to average.
+  
+  TODO: Calculating k means requires k*|signal| operations, which could be expensive. This could be sped up with faster math.
+  */
+  public static ArrayList<SignalDatum> DecorateRawSignal(ArrayList<Point> rawData)
+  {
+  	int pivot, i;
+	int WINDOW_SIZE = 19; //use and odd number, for pivot symmetry
+  	ArrayList<SignalDatum> data = new ArrayList<SignalDatum>(rawData.size());
+  	double xbar, ybar, xdev, ydev;
+  	
+  	/*
+  	The first WINDOW_SIZE/2 points are insufficient, so fold the first WINDOW_SIZE/2 points over and take their stdev.
+  	*/
+  	//beginning fold
+  	pivot = 0;
+  	while(pivot < rawData.size())
+  	{
+  		//Get the means for this window
+  		xbar = 0.0;
+  		ybar = 0.0;
+  		i = pivot - WINDOW_SIZE/2;
+  		while(i <= pivot + (WINDOW_SIZE/2)){
+  			if(i < rawData.size()){
+	  			xbar += rawData.get(Math.abs(i)).GetX();
+	  			ybar += rawData.get(Math.abs(i)).GetY();
+  			}
+  			else{ //reached end, so need to wrap i backwards; the indexing is from some board work for the wrap
+  			//TODO: THIS COULD GIVE NEGATIVE RESULT IF WINDOW LARGE, SIGNAL LENGTH SMALL
+				xbar += rawData.get(rawData.size() + rawData.size() - i - 2).GetX();
+				ybar += rawData.get(rawData.size() + rawData.size() - i - 2).GetY();
+  			}
+  			i++;
+  		}
+  		xbar /= WINDOW_SIZE;
+  		ybar /= WINDOW_SIZE;
+  		
+  		//calculate stdevs over the window
+  		xdev = 0.0;
+  		ydev = 0.0;
+  		i = pivot - WINDOW_SIZE/2;
+  		while(i <= pivot + WINDOW_SIZE/2){
+  			if(i < rawData.size()){
+	  			xdev += Math.pow(rawData.get(Math.abs(i)).GetX() - xbar, 2.0);
+	  			ydev += Math.pow(rawData.get(Math.abs(i)).GetY() - ybar, 2.0);
+  			}
+  			else{ //reached end, so need to wrap i backwards; the indexing is from some board work for the wrap
+  				//TODO: THIS COULD GIVE NEGATIVE RESULT IF WINDOW LARGE, SIGNAL LENGTH SMALL
+	  			xdev += Math.pow(rawData.get(rawData.size() + rawData.size() - i - 2).GetX() - xbar, 2.0);
+	  			ydev += Math.pow(rawData.get(rawData.size() + rawData.size() - i - 2).GetY() - ybar, 2.0);
+  			}
+  			i++;
+  		}
+  		xdev /= WINDOW_SIZE;
+  		ydev /= WINDOW_SIZE;
+
+  		SignalDatum datum = new SignalDatum(rawData.get(pivot), xdev, ydev);
+  		data.add(datum);
+  		/*
+  		data.get(pivot).point = rawData.get(pivot);
+  		data.get(pivot).xdev = xdev;
+  		data.get(pivot).ydev = ydev;
+  		*/
+  		pivot++;
+  	}
+  	
+  	return data;
+  }
+  
 
   /*
     A subsidiary responsibility of the SignalProcessor class is to clean the output. This

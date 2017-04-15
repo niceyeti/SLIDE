@@ -11,10 +11,10 @@ an x-sequence and a y-sequence, both of which are
 public class StructuredExample
 {
 	public String Word;
-	public ArrayList<Point> XSequence;
+	public ArrayList<SignalDatum> XSequence;
 	public ArrayList<Point> YSequence;
 
-	public StructuredExample(ArrayList<Point> xSeq, ArrayList<Point> ySeq, String word)
+	public StructuredExample(ArrayList<SignalDatum> xSeq, ArrayList<Point> ySeq, String word)
 	{
 		Word = word;
 		XSequence = xSeq;

@@ -42,7 +42,7 @@ public class InferenceAlgorithm
 	
 	This could be expanded to include yPrevious, the previous word for context.
 	*/
-	public double[] Phi(ArrayList<Point> xSeq, String word, double[] weights)
+	public double[] Phi(ArrayList<SignalDatum> xSeq, String word, double[] weights)
 	{
 		//run dynamic program, and backtrack over dp back pointers to get phi(xSeq,ySeq)
 		//_dp.Run(xSeq, ySeq, weights);
@@ -51,7 +51,7 @@ public class InferenceAlgorithm
 		return _dp.DpPhi(xSeq, word, weights);
 	}
 
-	public StructuredResult Infer(ArrayList<Point> xSeq, double[] weights)
+	public StructuredResult Infer(ArrayList<SignalDatum> xSeq, double[] weights)
 	{	//(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 		//evaluate and sort all words by their score w.r.t. @xSeq
 		return _dp.BasicWeightedDpInference(xSeq, weights, _vocab);

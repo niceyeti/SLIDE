@@ -81,7 +81,9 @@ public class StructuredDataset
 				}
 			}
 			
-			example = new StructuredExample(xSequence, ySequence, word);
+			ArrayList<SignalDatum> data = SignalProcessor.DecorateRawSignal(xSequence);
+			
+			example = new StructuredExample(data, ySequence, word);
 			
 			br.close();
 		}

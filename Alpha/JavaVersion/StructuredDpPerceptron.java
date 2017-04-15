@@ -85,7 +85,7 @@ public class StructuredDpPerceptron
 					phiHat =  _inferenceAlgorithm.Phi(d.XSequence, yHat.Word, _weights);
 					phiStar = _inferenceAlgorithm.Phi(d.XSequence, d.Word, _weights);
 					//update weights
-					_updateWeights(d.XSequence, phiHat, phiStar);
+					_updateWeights(phiHat, phiStar);
 					updateOccurred = true;
 				}
 			}
@@ -116,7 +116,7 @@ public class StructuredDpPerceptron
 	Note that both yHat and yStar don't have much meaning in this domain, except through _inferenceAlgorithm, 
 	which contains the knowledge for mapping these labels into coordinate sequences, as well as the phi function.
 	*/
-	private void _updateWeights(ArrayList<Point> xSeq, double[] phiHat, double[] phiStar)
+	private void _updateWeights(double[] phiHat, double[] phiStar)
 	{
 		//ArrayList<double> phiHat, phiStar;
 		
