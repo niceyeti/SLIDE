@@ -185,7 +185,7 @@ public class StructuredDpPerceptron
 		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(2, 0.001, vocabPath);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(2, 0.0001, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",
