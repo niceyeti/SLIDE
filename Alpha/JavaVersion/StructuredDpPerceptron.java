@@ -39,7 +39,7 @@ public class StructuredDpPerceptron
 	private void _zeroWeights()
 	{
 		for(int i = 0; i < _weights.length; i++){
-			_weights[i] = 0.0;
+			_weights[i] = -1.0;
 		}
 	}
 
@@ -187,7 +187,7 @@ public class StructuredDpPerceptron
 		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(6, 0.00001, vocabPath);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(6, 0.00005, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",
@@ -203,7 +203,7 @@ public class StructuredDpPerceptron
 
 		trainingData.BuildTrainingData(trainingFiles);
 
-		dpPerceptron.Train(trainingData,10);
+		dpPerceptron.Train(trainingData,30);
 		//twitch.TestLinearDP(wordFile);
 	}
 }
