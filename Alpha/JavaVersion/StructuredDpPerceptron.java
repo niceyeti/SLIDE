@@ -28,8 +28,9 @@ public class StructuredDpPerceptron
 		_alpha = alpha;
 		_weights = new double[weightDimension];
 		//_initWeights();
-		_weights[0] = 1.0;
+		_weights[0] = -1.0;
 		_weights[1] = -1.0;
+		_weights[2] = -1.0;
 		_inferenceAlgorithm = new InferenceAlgorithm(weightDimension, vocabPath);
 	}
 
@@ -186,7 +187,7 @@ public class StructuredDpPerceptron
 		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(2, 0.000001, vocabPath);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.00001, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",
