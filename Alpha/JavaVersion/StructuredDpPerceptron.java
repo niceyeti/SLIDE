@@ -21,16 +21,12 @@ public class StructuredDpPerceptron
 	double[] _weights;
 	double _alpha;
 	InferenceAlgorithm _inferenceAlgorithm;
-	
 
 	public StructuredDpPerceptron(int weightDimension, double alpha, String vocabPath)
 	{
 		_alpha = alpha;
 		_weights = new double[weightDimension];
-		//_initWeights();
-		_weights[0] = -1.0;
-		_weights[1] = -1.0;
-		_weights[2] = -1.0;
+		_initWeights();
 		_inferenceAlgorithm = new InferenceAlgorithm(weightDimension, vocabPath);
 	}
 
@@ -44,7 +40,7 @@ public class StructuredDpPerceptron
 	{
 		for(int i = 0; i < _weights.length; i++){
 			_weights[i] = 0.0;
-		}	
+		}
 	}
 
 	//not so important for linear perceptron as for neural nets, since the weights are updated directly by x vals
@@ -160,6 +156,10 @@ public class StructuredDpPerceptron
 		//get phi
 		//phiStar = _inferenceAlgorithm.Phi(xSeq, yStar);
 		//weight update
+		//System.out.println(phiHat.length);
+		
+		//System.out.println(phiHat[0]+" "+phiHat[1]+" "+phiHat[2]+" "+phiHat[3]+" "+phiHat[4]+" "+phiHat[5]);
+		//System.out.println(phiStar[0]+" "+phiStar[1]+" "+phiStar[2]+" "+phiStar[3]+" "+phiStar[4]+" "+phiStar[5]);
 		for(int i = 0; i < phiHat.length; i++){
 			_weights[i] = _weights[i] + _alpha * (phiStar[i] - phiHat[i]);
 		}
@@ -187,7 +187,7 @@ public class StructuredDpPerceptron
 		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(3, 0.00001, vocabPath);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(6, 0.00001, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",

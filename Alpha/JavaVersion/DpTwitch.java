@@ -527,18 +527,12 @@ public class DpTwitch
 	///// dynamic programming. None of this code is formalized, since its experimental.
 	
 	/*
-	BasicWeightedDp: The first test for basic perceptron-weighted dynamic programming. This method is intended
-	to establish viability, whether or not perceptron-weighted-dp even works.
 	
-	Keep this method simple, as a prototype. The weights should encompass only penalties for insertion, deletion, 
-	and substitiution. The dynamic program is the same as above pointwise methods, except that the penalty weights
-	are expected to change over iterations.
+	The main weighted dynamic programming driver, for testing various internal recurrence and feature representations.
+	Loops over the vocab, calls dp methods, and sorts results by score.
 	
-	Returns: A StructuredResult object.
-	
-	TODO: Could just store and return top-scoring word over all words, rather than the expensive sort() call.
 	*/
-	public ArrayList<SearchResult> BasicWeightedDpInference(ArrayList<SignalDatum> xSeq, double[] weights, Vocab vocab)
+	public ArrayList<SearchResult> WeightedDpInference(ArrayList<SignalDatum> xSeq, double[] weights, Vocab vocab)
 	{
 		int i = 0;
 		double dist;
@@ -558,7 +552,7 @@ public class DpTwitch
 		for(String word : vocab){
 			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
 			//dist = BasicWeightedDp(xSeq, hiddenSequence, weights, -1);
-			dist = BasicDistAndStdevWeightedDp(xSeq, hiddenSequence, weights, -1);
+			dist = ComplexDistAndStdevWeightedDp(xSeq, hiddenSequence, weights, -1);
 			SearchResult result = new SearchResult(dist,word);
 			results.add(result);
 
@@ -623,7 +617,7 @@ public class DpTwitch
 	algorithm according to weights, then x vector summed over the x values
 	given by the back pointers.
 	*/
-	public double[] DpPhiBasic(ArrayList<SignalDatum> xSeq, String word, double[] weights)
+	public double[] DpPhi(ArrayList<SignalDatum> xSeq, String word, double[] weights)
 	{	
 		ArrayList<Point> wordSequence = _keyMap.WordToPointSequence(" "+word+" ");
 		//run forward program
@@ -631,8 +625,13 @@ public class DpTwitch
 		//backtrack to derive phi
 		//return _phiBacktrack_Basic(xSeq.size()-1, wordSequence.size()-1);
 		
-		BasicDistAndStdevWeightedDp(xSeq, wordSequence, weights, -1);
-		return _phiBacktrack_Basic_Dist_And_Stdev(xSeq.size()-1, wordSequence.size()-1);
+		//the basic version with stdev and dist
+		//BasicDistAndStdevWeightedDp(xSeq, wordSequence, weights, -1);
+		//return _phiBacktrack_Basic_Dist_And_Stdev(xSeq.size()-1, wordSequence.size()-1);
+		
+		//complex six-dimensional phi backtracking
+		ComplexDistAndStdevWeightedDp(xSeq, wordSequence, weights, -1);
+		return _phiBacktrack_Complex_Dist_And_Stdev(xSeq.size()-1, wordSequence.size()-1);
 	}
 
 	private double[] _phiBacktrack_Basic_Dist_And_Stdev(int startRow, int startCol)
@@ -876,7 +875,7 @@ public class DpTwitch
 		//for optimal global alignment, the bottom-rightmost cell will have the score for this alignment
 		return _matrix[inputSequence.size()-1][wordSequence.size()-1].Score;
 	}
-
+	
  	/*
  	The perceptron-weighted dp update method. This is entirely experimental.
  	
@@ -903,22 +902,130 @@ public class DpTwitch
 			matrix[row][col].Score = leftScore;
 			matrix[row][col].Backpointer = Direction.LEFT;
 		}
+	}
+	
+	//Uses 6-dimensional weight vector. The first three components relate to the LEFT direction; the last three are UP.
+	public double ComplexDistAndStdevWeightedDp(ArrayList<SignalDatum> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
+	{
+		int i,j;
+		int INF = -100000000;
+		double rowMin = 0;
 
-		/*
-		//TODO: this assumes row and col are positive, non-zero. Needs error check
-		if(matrix[row][col-1].Score < matrix[row-1][col].Score){
-			//left cell is lesser (deletion from word), so update from it and point back to it
-			matrix[row][col].Score = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] * matrix[row][col].Dist;
-			//matrix[row][col].Score = matrix[row][col-1].Score + Point.CityBlockDistance(datum,keyPoint);
-			matrix[row][col].Backpointer = Direction.LEFT;
+		if(inputSequence.size() <= 1){
+			System.out.println("ERROR sequence1 too short for dpTwitch"+inputSequence.size());
+			return INF;
 		}
-		else{
-			//upper cell is lesser (deletion from signal), so take from it instead and point up
-			matrix[row][col].Score = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] * matrix[row][col].Dist;
-			//matrix[row][col].Score = matrix[row-1][col].Score + Point.CityBlockDistance(datum,keyPoint);
+		if(wordSequence.size() <= 1){
+			System.out.println("ERROR sequence2 too short for dpTwitch: "+wordSequence.size());
+			return INF;
+		}
+
+		//initialize the dp table, for distance minimization
+		_matrix[0][0].Dist = Point.DoubleDistance(inputSequence.get(0).point, wordSequence.get(0));
+		_matrix[0][0].Xdev = inputSequence.get(0).xdev;
+		_matrix[0][0].Ydev = inputSequence.get(0).ydev;
+		_matrix[0][0].Score = weights[0]*_matrix[0][0].Dist + weights[1]*_matrix[0][0].Xdev + weights[2]*_matrix[0][0].Ydev;
+		_matrix[0][0].Backpointer = _direction.UP;
+
+		//init the first row		
+		for(j = 1; j < wordSequence.size(); j++){
+			_matrix[0][j].Dist = Point.DoubleDistance(inputSequence.get(0).point, wordSequence.get(j));
+			_matrix[0][j].Xdev = inputSequence.get(0).xdev;
+			_matrix[0][j].Ydev = inputSequence.get(0).ydev;
+			_matrix[0][j].Score = weights[0]*_matrix[0][j].Dist + weights[1]*_matrix[0][j].Xdev + weights[2]*_matrix[0][j].Ydev + _matrix[0][j-1].Score;
+			_matrix[0][j].Backpointer = Direction.LEFT;
+		}
+		//init the first column
+		for(i = 1; i < inputSequence.size(); i++){
+			_matrix[i][0].Dist = Point.DoubleDistance(inputSequence.get(i).point, wordSequence.get(0));
+			_matrix[i][0].Xdev = inputSequence.get(i).xdev;
+			_matrix[i][0].Ydev = inputSequence.get(i).ydev;
+			_matrix[i][0].Score = weights[3]*_matrix[i][0].Dist + weights[4]*_matrix[i][0].Xdev + weights[5]*_matrix[i][0].Ydev + _matrix[i-1][0].Score;
+			_matrix[i][0].Backpointer = Direction.UP;
+		}
+
+		//run the forward algorithm
+		for(i = 1; i < inputSequence.size(); i++){
+			rowMin = INF;
+			for(j = 1; j < wordSequence.size(); j++){
+				//the recurrence
+				_scoreCell_Complex_Weighted_Dist_And_Stdev(i, j, inputSequence.get(i), wordSequence.get(j), _matrix, weights);
+				if(_matrix[i][j].Score < rowMin){
+					rowMin = _matrix[i][j].Score;
+				}
+			}
+			if(threshold > 0 && rowMin > threshold){
+				return INF;
+			}
+		}
+
+		//_printMatrix(inputSequence.size(),wordSequence.size());
+
+		//for optimal global alignment, the bottom-rightmost cell will have the score for this alignment
+		return _matrix[inputSequence.size()-1][wordSequence.size()-1].Score;
+	}
+	
+	
+	/*
+	Let the weights be a six-dimensional vector: three components for UP, three for LEFT. The three components
+	represent distance, xdev, and ydev.
+	TODO: If this works, we could possibly simplify by using a single attribute fo st-dev, such as xdev+ydev.
+	*/
+	private void _scoreCell_Complex_Weighted_Dist_And_Stdev(int row, int col, SignalDatum datum, Point keyPoint, MatrixCell[][] matrix, double[] weights)
+	{
+		double upScore, leftScore, upDot, leftDot;
+		//double curDist = -Point.DoubleDistance(datum.point, keyPoint);
+
+		//System.out.println(datum.xdev+" "+datum.ydev);
+		matrix[row][col].Dist = Point.DoubleDistance(datum.point, keyPoint);
+		_matrix[row][col].Xdev = datum.xdev;
+		_matrix[row][col].Ydev = datum.ydev;
+		//calculate left direction score
+		leftDot = weights[0]*matrix[row][col].Dist + weights[1]*matrix[row][col].Xdev + weights[2]*matrix[row][col].Ydev;
+		leftScore = matrix[row][col-1].Score + leftDot;
+		//calculate up direction score
+		upDot = weights[3]*matrix[row][col].Dist + weights[4]*matrix[row][col].Xdev + weights[5]*matrix[row][col].Ydev;
+		upScore = matrix[row-1][col].Score + upDot;
+
+		if(upScore > leftScore){
+			matrix[row][col].Score = upScore;
 			matrix[row][col].Backpointer = Direction.UP;
 		}
-		*/
+		else{
+			matrix[row][col].Score = leftScore;
+			matrix[row][col].Backpointer = Direction.LEFT;
+		}
+	}
+	
+	//Just by convention, let the first three components of phi correspond with LEFT, the last three with UP.
+	private double[] _phiBacktrack_Complex_Dist_And_Stdev(int startRow, int startCol)
+	{
+		int row, col;
+		double[] phi = new double[6];
+
+		//zero the vector
+		for(int i = 0; i < phi.length; i++){
+			phi[i] = 0.0;
+		}
+		
+		row = startRow;
+		col = startCol;
+		while(row >= 0 && col >= 0){ //this loop construction works, assuming matrix backpointers at edges have been initialized such that row/col indices never go negative
+			if(_matrix[row][col].Backpointer == _direction.LEFT){
+				phi[0] += _matrix[row][col].Dist;
+				phi[1] += _matrix[row][col].Xdev;
+				phi[2] += _matrix[row][col].Ydev;
+				col--;
+			}
+			else if(_matrix[row][col].Backpointer == _direction.UP){
+				phi[3] += _matrix[row][col].Dist;
+				phi[4] += _matrix[row][col].Xdev;
+				phi[5] += _matrix[row][col].Ydev;
+				row--;
+			}
+		}
+		
+		return phi;
 	}
 
 

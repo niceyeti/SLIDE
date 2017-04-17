@@ -45,10 +45,7 @@ public class InferenceAlgorithm
 	public double[] Phi(ArrayList<SignalDatum> xSeq, String word, double[] weights)
 	{
 		//run dynamic program, and backtrack over dp back pointers to get phi(xSeq,ySeq)
-		//_dp.Run(xSeq, ySeq, weights);
-		//ArrayList<double> phi = _dp.SumBackTrack();
-		
-		return _dp.DpPhiBasic(xSeq, word, weights);
+		return _dp.DpPhi(xSeq, word, weights);
 	}
 
 	/*
@@ -59,7 +56,7 @@ public class InferenceAlgorithm
 	public ArrayList<SearchResult> Infer(ArrayList<SignalDatum> xSeq, double[] weights)
 	{	//(ArrayList<Point> inputSequence, ArrayList<Point> wordSequence, double[] weights, double threshold)
 		//evaluate and sort all words by their score w.r.t. @xSeq
-		return _dp.BasicWeightedDpInference(xSeq, weights, _vocab);
+		return _dp.WeightedDpInference(xSeq, weights, _vocab);
 	}
 }
 
