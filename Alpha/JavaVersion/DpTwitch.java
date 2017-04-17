@@ -486,6 +486,7 @@ public class DpTwitch
 		double upScore, leftScore;
 		//double curDist = -Point.DoubleDistance(datum.point, keyPoint);
 
+		//System.out.println(datum.xdev+" "+datum.ydev);
 		matrix[row][col].Dist = Point.DoubleDistance(datum.point, keyPoint);
 		leftScore = matrix[row][col-1].Score + weights[_direction.LEFT.ordinal()] * matrix[row][col].Dist;
 		upScore = matrix[row-1][col].Score + weights[_direction.UP.ordinal()] * matrix[row][col].Dist;
@@ -616,7 +617,7 @@ public class DpTwitch
 	algorithm according to weights, then x vector summed over the x values
 	given by the back pointers.
 	*/
-	public double[] DpPhi(ArrayList<SignalDatum> xSeq, String word, double[] weights)
+	public double[] DpPhiBasic(ArrayList<SignalDatum> xSeq, String word, double[] weights)
 	{	
 		ArrayList<Point> wordSequence = _keyMap.WordToPointSequence(" "+word+" ");
 		//run forward program

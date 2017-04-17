@@ -48,7 +48,7 @@ public class InferenceAlgorithm
 		//_dp.Run(xSeq, ySeq, weights);
 		//ArrayList<double> phi = _dp.SumBackTrack();
 		
-		return _dp.DpPhi(xSeq, word, weights);
+		return _dp.DpPhiBasic(xSeq, word, weights);
 	}
 
 	/*
