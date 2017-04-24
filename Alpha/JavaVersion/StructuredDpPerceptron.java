@@ -58,10 +58,10 @@ public class StructuredDpPerceptron
 	{
 		int i = 0;
 		int rank = -1;
-		bool found = false;
+		boolean found = false;
 		
 		for(i = 0, found = false; i < results.size() && !found; i++){
-			if(result.GetWord().equals(word)){
+			if(results.get(i).GetWord().equals(word)){
 				rank = i;
 				found = true; 
 			}
