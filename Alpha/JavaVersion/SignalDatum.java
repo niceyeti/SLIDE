@@ -30,6 +30,11 @@ public class SignalDatum
 		ydev = 0.0;
 	}
 
+	public String ToString()
+	{
+		return "("+point.GetX()+","+point.GetY()+","+xdev+","+ydev+")";
+	}
+
 	public SignalDatum(Point pt, double sigma_x, double sigma_y)
 	{
 		point = pt;

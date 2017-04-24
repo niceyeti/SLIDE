@@ -29,6 +29,7 @@ public class StructuredDataset
 		for(String path : trainingFiles)
 		{
 			StructuredExample example = _readTrainingExample(path);
+			example.Print();
 			_trainingExamples.add(example);
 		}
 	}

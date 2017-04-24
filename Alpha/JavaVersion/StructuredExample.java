@@ -20,5 +20,42 @@ public class StructuredExample
 		XSequence = xSeq;
 		YSequence = ySeq;
 	}
+	
+	//Outputs the example in a python parseable dict string, json like format, for easy reading in python using eval()
+	public String Print()
+	{
+		int i;
+		String output = "";
+	
+	
+		output = "{\'Word\': \'"+Word+"\',";
+		output += "\'Y-sequence\': [";
+		i = 0;
+		while(i < YSequence.size()-2){
+			output += YSequence.get(i).ToString();
+			output += ",";
+			i++;
+		}
+		//close the list with the last one
+		output += YSequence.get( YSequence.size() - 1 ).ToString();
+		output += "],";
+
+
+		output += "\'X-sequence\': [";
+		i = 0;
+		while(i < XSequence.size()-2){
+			output += XSequence.get(i).ToString();
+			output += ",";
+			i++;
+		}
+		//close the list with the last one
+		output += XSequence.get( YSequence.size() - 1 ).ToString();
+		output += "]}";
+	
+		System.out.println(output);
+	
+		return output;
+	}
+	
 }
 

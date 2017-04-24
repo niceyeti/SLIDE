@@ -44,6 +44,12 @@ public class Point
 		return other.GetX() == m_X && other.GetY() == m_Y;
 	}
 
+	//prints the point as a python parseable tuple
+	public String ToString()
+	{
+		return "("+m_X+","+m_Y+")";
+	}
+
   public static double DoubleDistance_Doom(Point p1, Point p2){
     return 0.0;
   }
