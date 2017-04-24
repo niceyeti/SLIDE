@@ -17,11 +17,12 @@ yIndex = 1
 stdevxIndex = 2
 stdevyIndex = 3
 
+###################################################################################
 #An example of plotting; here the x-position (from Xsequence) is plotted over time
 ys = [tup[xIndex] for tup in biloxiStream["X-sequence"]]
 xs = [i for i in range(len(ys))]
 plt.plot(xs, ys, color="blue")
 plt.savefig("xValues.png")
 plt.show()
-
+###################################################################################
 
