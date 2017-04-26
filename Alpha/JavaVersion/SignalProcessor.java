@@ -348,8 +348,12 @@ public class SignalProcessor
   			}
   			i++;
   		}
+  		
   		xdev /= WINDOW_SIZE;
   		ydev /= WINDOW_SIZE;
+
+		xdev = Math.sqrt(xdev);
+		ydev = Math.sqrt(ydev);
 
   		SignalDatum datum = new SignalDatum(rawData.get(pivot), xdev, ydev);
   		data.add(datum);
