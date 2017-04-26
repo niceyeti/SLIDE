@@ -49,7 +49,7 @@ public class StructuredDpPerceptron
 		Random r = new Random();
 		//initialize _weights to random small values
 		for(int i = 0; i < _weights.length; i++){
-			_weights[i] = -1.0 * r.nextDouble();
+			_weights[i] = -1.0 * r.nextDouble() / 100;
 		}
 	}
 
@@ -184,11 +184,11 @@ public class StructuredDpPerceptron
 
 	public static void main(String[] args)
 	{
-		String vocabPath = "./resources/languageModels/vocab.txt";
-		//String vocabPath = "./resources/languageModels/testTruncVocab.txt";
+		//String vocabPath = "./resources/languageModels/vocab.txt";
+		String vocabPath = "./resources/languageModels/testTruncVocab.txt";
 		String keyMapFile = "./resources/ui/keyMap.txt";
 		StructuredDataset trainingData = new StructuredDataset(keyMapFile);
-		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(6, 0.00001, vocabPath);
+		StructuredDpPerceptron dpPerceptron = new StructuredDpPerceptron(6, 0.000001, vocabPath);
 		
 		String[] trainingFiles = new String[]{"./resources/testing/structuredData/word1.txt",
 											"./resources/testing/structuredData/word2.txt",

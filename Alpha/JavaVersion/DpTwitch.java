@@ -535,8 +535,13 @@ public class DpTwitch
 	public ArrayList<SearchResult> WeightedDpInference(ArrayList<SignalDatum> xSeq, double[] weights, Vocab vocab)
 	{
 		int i = 0;
-		double dist;
+		double score;
+		
+		//these are dangerous during experimentation, but very useful for speeding up inference;
+		//dangerous since these are hardcoded to certain scalar score ranges; the threshold is dependent on scalar changes in the score via the changes in the weights
 		double maxScore = -99999999;
+		double threshMargin = 500;
+		double threshold = maxScore - threshMargin;
 		//ArrayList<Point> testPoints = BuildTestData(inputFile);
 		//ArrayList<Point> testPoints = xSeq;
 		ArrayList<SearchResult> results = new ArrayList<SearchResult>();
@@ -547,14 +552,20 @@ public class DpTwitch
 		//simple, modest filtering
 		//testPoints = _signalProcessor.SlidingMeanFilter(testPoints,2);
 		//testPoints = _signalProcessor.RedundancyFilter(testPoints);
-		System.out.println("num test points: "+xSeq.size());
+		System.out.println("Num x-sequence sensor points: "+xSeq.size());
 
 		for(String word : vocab){
 			ArrayList<Point> hiddenSequence = _keyMap.WordToPointSequence(" "+word+" ");
 			//dist = BasicWeightedDp(xSeq, hiddenSequence, weights, -1);
-			dist = ComplexDistAndStdevWeightedDp(xSeq, hiddenSequence, weights, -1);
-			SearchResult result = new SearchResult(dist,word);
+			score = ComplexDistAndStdevWeightedDp(xSeq, hiddenSequence, weights, threshold);
+			SearchResult result = new SearchResult(score,word);
 			results.add(result);
+
+			if(score > maxScore){
+				maxScore = score;
+				threshold = maxScore - threshMargin;
+			}
+			
 
 			/* space/speed optimizations; not used during experimentation
 			if(dist >= 0){
@@ -630,7 +641,7 @@ public class DpTwitch
 		//return _phiBacktrack_Basic_Dist_And_Stdev(xSeq.size()-1, wordSequence.size()-1);
 		
 		//complex six-dimensional phi backtracking
-		ComplexDistAndStdevWeightedDp(xSeq, wordSequence, weights, -1);
+		ComplexDistAndStdevWeightedDp(xSeq, wordSequence, weights, -10000000);
 		return _phiBacktrack_Complex_Dist_And_Stdev(xSeq.size()-1, wordSequence.size()-1);
 	}
 
@@ -865,7 +876,7 @@ public class DpTwitch
 					rowMin = _matrix[i][j].Score;
 				}
 			}
-			if(threshold > 0 && rowMin > threshold){
+			if(rowMin < threshold){
 				return INF;
 			}
 		}
@@ -909,7 +920,7 @@ public class DpTwitch
 	{
 		int i,j;
 		int INF = -100000000;
-		double rowMin = 0;
+		double rowMax = 0;
 
 		if(inputSequence.size() <= 1){
 			System.out.println("ERROR sequence1 too short for dpTwitch"+inputSequence.size());
@@ -946,17 +957,23 @@ public class DpTwitch
 
 		//run the forward algorithm
 		for(i = 1; i < inputSequence.size(); i++){
-			rowMin = INF;
+			rowMax = INF;
 			for(j = 1; j < wordSequence.size(); j++){
 				//the recurrence
 				_scoreCell_Complex_Weighted_Dist_And_Stdev(i, j, inputSequence.get(i), wordSequence.get(j), _matrix, weights);
-				if(_matrix[i][j].Score < rowMin){
-					rowMin = _matrix[i][j].Score;
+				if(_matrix[i][j].Score > rowMax){
+					rowMax = _matrix[i][j].Score;
 				}
 			}
-			if(threshold > 0 && rowMin > threshold){
+			
+			/*
+			//NOTE: Using this may be dangerous: does a low score in some row imply the score could never increase in subsequent rows?
+			if(rowMax < threshold){
+				//System.out.println("INF");
 				return INF;
 			}
+			*/
+			
 		}
 
 		//_printMatrix(inputSequence.size(),wordSequence.size());
