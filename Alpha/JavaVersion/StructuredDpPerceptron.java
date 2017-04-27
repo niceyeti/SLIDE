@@ -124,7 +124,7 @@ public class StructuredDpPerceptron
 			//model converged if no predictions were incorrect for above loop
 			isConverged = !updateOccurred;
 		}
-		System.out.println("Training completed.");
+		System.out.println("Training complete.");
 		_printWeights();
 	}
 
