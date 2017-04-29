@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from pylab import rcParams
 
 
-rcParams['figure.figsize'] = 20, 12
+rcParams['figure.figsize'] = 10, 6
 
 """
 biloxiStream is just a python dict with keys: 'Word', 'Y-sequence', and 'X-sequence'. 
@@ -31,51 +31,51 @@ xstdevXys = [i for i in range(len(stdevXys))]
 stdevYys = [tup[stdevyIndex] for tup in biloxiStream["X-sequence"]]
 ystdevYys = [i for i in range(len(stdevYys))]
 
-x, = plt.plot(xs, ys, color="blue", label = 'xValues')
+x, = plt.plot(xs, ys, color="blue", label = 'X-Position')
 #plt.savefig("xValues.png")
 
-y, = plt.plot(yxs, yys, color="g", label = 'yValues')
+y, = plt.plot(yxs, yys, color="g", label = 'Y-Position')
 #plt.savefig("yValues.png")
 
-dx, = plt.plot(xstdevXys, stdevXys, color="r", label = 'stdev xValues')
+dx, = plt.plot(xstdevXys, stdevXys, color="r", label = 'Stdev X-Position')
 #plt.savefig("stdev xValues.png")
 
-dy, = plt.plot(ystdevYys, stdevYys, color="y", label = 'stdev yValues')
+dy, = plt.plot(ystdevYys, stdevYys, color="y", label = 'Stdev Y-Position')
 #plt.savefig("stdev yValues.png")
 
 # plt.xlables("time")
 # plt.ylables("position")
 plt.legend(handles = [x, y, dx, dy])
-plt.xlabel('time')
-plt.ylabel("position")
+plt.xlabel('Time, 50Hz resolution' )
+plt.suptitle('All Values',fontweight="bold",fontsize=12)
 plt.savefig('xydxdy.png')
 
 plt.figure()
 plt.plot(xs, ys, color="blue")
-plt.xlabel('time')
-plt.ylabel("position")
-plt.title('xValues')
+plt.xlabel('Time, 50Hz resolution' )
+plt.ylabel("X Position")
+plt.suptitle('Cursor X-Displacement',fontweight="bold",fontsize=12)
 plt.savefig("xValues.png")
 
 plt.figure()
 plt.plot(yxs, yys, color="g")
-plt.xlabel('time')
-plt.ylabel("position")
-plt.title('yValues')
+plt.xlabel('Time, 50Hz resolution' )
+plt.ylabel("Y Position")
+plt.suptitle('Cursor Y-Displacement',fontweight="bold",fontsize=12)
 plt.savefig("yValues.png")
 
 plt.figure()
 plt.plot(xstdevXys, stdevXys, color="r")
-plt.xlabel('time')
-plt.ylabel("position")
-plt.title('stdev xValues')
+plt.xlabel('Time, 50Hz resolution' )
+plt.ylabel("Stdev Y")
+plt.suptitle('Y-Displacement Standard Deviation',fontweight="bold",fontsize=12)
 plt.savefig("stdev xValues.png")
 
 plt.figure()
 plt.plot(ystdevYys, stdevYys, color="y")
-plt.xlabel('time')
-plt.ylabel("position")
-plt.title('stdev yValues')
+plt.xlabel('Time, 50Hz resolution' )
+plt.ylabel("Stdev X")
+plt.suptitle('X-Displacement Standard Deviation',fontweight="bold",fontsize=12)
 plt.savefig("stdev yValues.png")
 
 plt.show()
